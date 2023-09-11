@@ -15,11 +15,40 @@ sapRaw <- read.csv(paste0(dirData,"/sapflow/09_08_2022/Sapflow_TableDT.dat"),
 weather <- read.csv(paste0(dirData, "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
                     skip=3, header=FALSE)
 
-weatherNames <- read.csv(paste0(dirData, "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
-                         nrows=3, header=FALSE)
 
+
+colnames(weather) <- c("Date","SolRad","Precip","LightningAct","LightningDist","WindDir","WindSpeed",
+                          "GustSpeed","AirTemp","VaporPr","AtmosPr","XLevel","YLevel","MaxPrecip",
+                          "SensorTemp","VPD","BatPct","BatVolt","RefPr","LogTemp")
+
+weatherInfo <- read.csv(paste0(dirData, "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
+                         nrows=3, header=FALSE)
+# allometry
 basswoodmeas <- read.csv(paste0(dirData,"/allometry/basswoodmeas.csv"))
 hemlockmeas <- read.csv(paste0(dirData,"/allometry/hemlockmeas.csv"))
+basswoodlm <- read.csv(paste0(dirData,"/allometry/DettmannMcfarlane.csv"))
+# sensor info
+sensors <- read.csv(paste0(dirData,"/sapflow/sensordata_061522.csv"))
+
+
+#### sapwood ----
+#hemlock allometry from "Water use by eastern hemlock (Tsuga canadensis) 
+#and black birch (Betula lenta): implications of effects of the hemlock woolly adelgid" by Daley et Al
+#basswood allometry by Ewers et. Al: "Tree species effects on stand transpiration"
+
+sapdepth <- lm(basswoodmeas$Sapwooddepth.cm ~ basswoodmeas$DBH.cm)
+
+summary(sapdepth)
+
+sapdepthHem <- lm(hemlockmeas$Sapwooddepth.cm ~ hemlockmeas$DBH.cm)
+
+summary(sapdepthHem)
+
+sensors$sd.cm <- ifelse(sensors$Tree.Type == "Hemlock", #if sensors is hemlock,
+                        -0.0133 + (0.1252*sensors$DBH..cm.),
+                        -0.7783 + (0.24546*sensors$DBH..cm.))
+
+
 
 #### organize sap flow ----
 
@@ -38,3 +67,302 @@ colnames(datSap ) <- c("date","record",paste0("dT",seq(1,16)), "dateF", "year", 
 # subset for when all sensors were collecting data
 datSap <- datSap %>%
   filter(doy >= 160 & year == 2022)
+
+#organize data for easier calculations
+tabledt <- datSap
+
+
+dtAll <- data.frame(date= rep(tabledt$date, times = 16),
+                    doy = rep(tabledt$doy, times = 16),
+                    hour = rep(tabledt$hour, times = 16),
+                    DD = rep(tabledt$DD, times = 16),
+                    sensor = rep(seq(1,16), each = nrow(tabledt)),
+                    dT = c(tabledt[,3],
+                           tabledt[,4],
+                           tabledt[,5],
+                           tabledt[,6],
+                           tabledt[,7],
+                           tabledt[,8],
+                           tabledt[,9],
+                           tabledt[,10],
+                           tabledt[,11],
+                           tabledt[,12],
+                           tabledt[,13],
+                           tabledt[,14],
+                           tabledt[,15],
+                           tabledt[,16],
+                           tabledt[,17],
+                           tabledt[,18]))
+
+#### sap flow calculations ----
+
+#join sensor info into table dt
+#make a doy that contains the same night
+#so new day actually starts at 5 am not midnight
+dtAll$doy5 <- ifelse(dtAll$hour < 5, dtAll$doy-1,dtAll$doy)
+
+night <- dtAll[dtAll$hour < 5|dtAll$hour >= 22,]
+
+#filter night so maximum in day and sensor is provided
+maxnight1 <- night %>%
+  group_by(sensor, doy5) %>%
+  filter(dT == max(dT),na.rm=TRUE)
+#remove duplicate maximums that occur for longer than 15 min
+#just take earliest measurement
+maxnight <- maxnight1  %>%
+  group_by(sensor, doy5) %>%
+  filter(hour == min(hour),na.rm=TRUE)
+
+#ggplot(maxnight, aes(doy5,dT, color=sensor))+
+#geom_point()
+#isolate max and join back into table
+maxJoin <- data.frame(sensor=maxnight$sensor,
+                      doy5=maxnight$doy5,
+                      maxDT = maxnight$dT)
+
+ggplot(maxJoin, aes(doy5, maxDT, color = as.factor(sensor)))+
+  geom_line()+
+  geom_point()
+
+
+#join backinto tabledt
+dtCalct1 <- left_join(dtAll, maxJoin, by=c("sensor","doy5"))
+#join sensor info
+dtCalc <- left_join(dtCalct1 , sensors, by=c("sensor"="Sensor.Number"))
+
+#from clearwater
+
+#sap velocity m s-1 (v)
+#v = 0.000119*k^1.231
+#flow is F (L s-1) = v* A (m2, sapwood area)
+
+#K= (dTmax - dT)/dT if sensor is fully within sapwood
+
+#otherwise correction is:
+#dt sap = (dT - b* Dtmax)/a
+
+#a = proportion of probe in sapwood and b=1-a
+
+dtCalc$a <- ifelse(dtCalc$sd.cm >= 3,1,
+                   dtCalc$sd.cm/3)
+
+dtCalc$b <- 1 - dtCalc$a
+
+dtCalc$dTCor <- (dtCalc$dT - (dtCalc$b * dtCalc$maxDT))/dtCalc$a
+dtCalc$K <- (dtCalc$maxDT - dtCalc$dTCor)/dtCalc$dTCor
+dtCalc$velo <- 0.000119*(dtCalc$K^1.231)
+
+
+#separate types
+hemlockT <- dtCalc[dtCalc$Tree.Type == "Hemlock",]
+basswoodT <- dtCalc[dtCalc$Tree.Type == "Basswood",]
+
+# filter anything above the 99 percentile
+hemlockQ <- quantile(hemlockT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
+
+hemlock <- hemlockT[hemlockT$velo<= hemlockQ[100],]
+
+basswoodQ <- quantile(basswoodT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
+
+
+basswood <-basswoodT[basswoodT$velo<= basswoodQ[100],]
+
+
+#### radial correction ----
+
+#############
+#compare N & S sensors for hemlock
+sens5 <- na.omit(data.frame(date = hemlock$date[hemlock$sensor == 5],
+                            veloN = hemlock$velo[hemlock$sensor == 5]))
+
+sens6 <- na.omit(data.frame(date = hemlock$date[hemlock$sensor == 6],
+                            veloS = hemlock$velo[hemlock$sensor == 6]))
+
+treeD1 <- inner_join(sens5,sens6, by="date")
+
+plot(treeD1$veloN, treeD1$veloS)
+#compare N & S sensors for hemlock
+sens12 <- na.omit(data.frame(date = hemlock$date[hemlock$sensor == 12],
+                             veloN = hemlock$velo[hemlock$sensor == 12]))
+
+sens11 <- na.omit(data.frame(date = hemlock$date[hemlock$sensor == 11],
+                             veloS = hemlock$velo[hemlock$sensor == 11]))
+
+treeD2 <- inner_join(sens12,sens11, by="date")
+
+sens15 <- na.omit(data.frame(date = hemlock$date[hemlock$sensor == 15],
+                             veloN = hemlock$velo[hemlock$sensor == 15]))
+
+sens14 <- na.omit(data.frame(date = hemlock$date[hemlock$sensor == 14],
+                             veloS = hemlock$velo[hemlock$sensor == 14]))
+
+treeD3 <- inner_join(sens15,sens14, by="date")
+
+treeDirHem <- na.omit(rbind(treeD1,treeD2,treeD3))
+#check relationship
+azim.rel <- lm(treeDirHem$veloS ~ treeDirHem$veloN)
+summary(azim.rel)
+
+ggplot(treeDirHem, aes(veloN,veloS))+
+  geom_point()+
+  geom_abline()
+
+# check basswood
+
+
+sens1 <- na.omit(data.frame(date = basswood$date[basswood$sensor == 1],
+                            veloN = basswood$velo[basswood$sensor == 1]))
+
+sens2 <- na.omit(data.frame(date = basswood$date[basswood$sensor == 2],
+                            veloS = basswood$velo[basswood$sensor == 2]))
+
+treeB1 <- inner_join(sens1,sens2, by="date")
+
+sens3 <- na.omit(data.frame(date = basswood$date[basswood$sensor == 3],
+                            veloN = basswood$velo[basswood$sensor == 3]))
+
+sens4 <- na.omit(data.frame(date = basswood$date[basswood$sensor == 4],
+                            veloS = basswood$velo[basswood$sensor == 4]))
+
+treeB2 <- inner_join(sens3,sens4, by="date")
+
+sens8 <- na.omit(data.frame(date = basswood$date[basswood$sensor == 8],
+                            veloN = basswood$velo[basswood$sensor == 8]))
+
+sens9 <- na.omit(data.frame(date = basswood$date[basswood$sensor == 9],
+                            veloS = basswood$velo[basswood$sensor == 9]))
+
+treeB3 <- inner_join(sens8,sens9, by="date")
+
+treeBDir <- rbind(treeB1,treeB2, treeB3)
+
+azimB.rel <- lm(treeBDir$veloS ~ treeBDir$veloN)
+summary(azimB.rel)
+
+ggplot(treeBDir, aes(veloN,veloS))+
+  geom_point()+
+  geom_abline()
+
+
+
+hemlock.tree <- hemlock %>%
+  filter(Direction == "N")
+
+basswood.tree <- basswood %>%
+  filter(Direction == "N")
+
+# running radial correction
+hemlock.cor <- coefficients(azim.rel)
+hemlock.tree$velo.cor <- (hemlock.tree$velo*0.5)+(((hemlock.tree$velo*hemlock.cor[2])+hemlock.cor[1])*0.5)
+
+basswood.cor <- coefficients(azimB.rel)
+basswood.tree$velo.cor <- (basswood.tree$velo*0.5)+(((basswood.tree$velo*basswood.cor[2])+basswood.cor[1])*0.5)
+
+#### Canopy calculations   ----
+
+## sapwood area
+
+# hemlock tree
+plot(log(hemlockmeas$DBH.cm), log(hemlockmeas$SapwoodArea.cm2))
+sapareaHem <- lm(log(hemlockmeas$SapwoodArea.cm2) ~ log(hemlockmeas$DBH.cm))
+abline(sapareaHem)
+summary(sapareaHem)
+
+hemlock.tree$sap.areacm2 <- exp(-1.192 + 2.010*log(hemlock.tree$DBH..cm.))
+#convert sap area to m2
+hemlock.tree$sap.aream2 <- 0.0001*hemlock.tree$sap.areacm2
+
+# basswood
+
+#calculate heartwood
+
+basswood.tree$bark <- (basswood.tree$DBH..cm.*0.0326) - 0.1708
+
+basswood.tree$Htwd <- basswood.tree$DBH..cm.  - (basswood.tree$sd.cm*2) - (basswood.tree$bark*2)
+
+
+
+#calculate sapwood area
+
+basswood.tree$sap.areacm2 <- (pi*(((basswood.tree$sd.cm/2)+(basswood.tree$Htwd/2))^2))-(pi*((basswood.tree$Htwd/2)^2))
+basswood.tree$sap.aream2 <-  0.0001*basswood.tree$sap.areacm2
+
+
+#check relationship
+# lm.log<- lm(log(basswoodLA$LA.m2) ~ log(basswoodLA$DBH.cm))
+# summary(lm.log)
+# plot(basswoodLA$DBH.cm, basswoodLA$LA.m2)
+# plot(log(basswoodLA$DBH.cm), log(basswoodLA$LA.m2))
+#regression log(LA (m2)) = -1.058 + 1.828 * log(dbh.cm)
+
+#estimate leaf area in m2
+
+#crown = 1.6961 + 0.4233(DBH)
+
+#basswood leaf area to the best of our ability
+#mean basswood weight = 22.1324289 g/m2
+#1/slw = 0.04518257
+
+blm <- basswoodlm %>%
+      filter(SPECIES =="Tilia americana")
+plot(log(blm$DBH_CM), log(blm$LEAF_DRY_MASS_KG))
+
+b.mod <- lm(log(blm$LEAF_DRY_MASS_KG)~log(blm$DBH_CM))
+summary(b.mod)
+
+basswood.tree$biomass.kg = exp(-4.25 + 1.79*(log(basswood.tree$DBH..cm.)))
+
+basswood.tree$biomass.g <- basswood.tree$biomass.kg*1000
+
+#*total grams of leaves
+
+#conversion from Jurik 1986
+basswood.tree$LA.m2 <- 0.04518257*basswood.tree$biomass.g
+
+#leaf area in m2 for hemlock, from Kenefic et al
+hemlock.tree$LA.m2 <- 7.5432 + (0.3659*(hemlock.tree$sap.areacm2))
+
+
+
+#### Flow calculations   ----
+
+#flow rate according to clearwater
+#F(L s-1) =  v(m s-1)* A (m2)
+
+hemlock.tree$Flow.m3.s <- hemlock.tree$velo * hemlock.tree$sap.aream2
+
+basswood.tree$Flow.m3.s <- basswood.tree$velo * basswood.tree$sap.aream2
+
+#convert to L per secton
+
+hemlock.tree$Flow.L.s <- hemlock.tree$Flow.m3.s * 1000
+
+basswood.tree$Flow.L.s <- basswood.tree$Flow.m3.s * 1000
+
+#normalize by canopy leaf area
+hemlock.tree$Flow.L.m2.s <- hemlock.tree$Flow.L.s /hemlock.tree$LA.m2
+
+basswood.tree$Flow.L.m2.s <- basswood.tree$Flow.L.s /basswood.tree$LA.m2
+
+#summarize total per day for each tree
+#remove NA
+hemlock.treeNN <- hemlock.tree[is.na(hemlock.tree$Flow.L.s)==FALSE,]
+#calculate total water use by each tree in a day
+#total liters used in 15 min period
+hemlock.treeNN$L.p <- hemlock.treeNN$Flow.L.s* 60 *15
+#per canopy area
+hemlock.treeNN$L.p.m2  <- hemlock.treeNN$L.p/hemlock.treeNN$LA.m2
+
+#summarize total per day for each tree
+#remove NA
+basswood.treeNN <- basswood.tree[is.na(basswood.tree$Flow.L.s)==FALSE,]
+#calculate total water use by each tree in a day
+#total liters used in 15 min period
+basswood.treeNN$L.p <- basswood.treeNN$Flow.L.s* 60 *15
+# per canopy area
+basswood.treeNN$L.p.m2  <- basswood.treeNN$L.p/basswood.treeNN$LA.m2
+
+
+
+##############################
+#### Summary tables    ----
