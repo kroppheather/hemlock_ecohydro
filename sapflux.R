@@ -346,7 +346,8 @@ basswood.tree$Flow.L.m2.s <- basswood.tree$Flow.L.s /basswood.tree$LA.m2
 
 #summarize total per day for each tree
 #remove NA
-hemlock.treeNN <- hemlock.tree[is.na(hemlock.tree$Flow.L.s)==FALSE,]
+hemlock.treeNN <- hemlock.tree %>%
+  filter(is.na(Flow.L.s)==FALSE)
 #calculate total water use by each tree in a day
 #total liters used in 15 min period
 hemlock.treeNN$L.p <- hemlock.treeNN$Flow.L.s* 60 *15
@@ -355,7 +356,8 @@ hemlock.treeNN$L.p.m2  <- hemlock.treeNN$L.p/hemlock.treeNN$LA.m2
 
 #summarize total per day for each tree
 #remove NA
-basswood.treeNN <- basswood.tree[is.na(basswood.tree$Flow.L.s)==FALSE,]
+basswood.treeNN <- basswood.tree %>%
+  filter(is.na(Flow.L.s)==FALSE)
 #calculate total water use by each tree in a day
 #total liters used in 15 min period
 basswood.treeNN$L.p <- basswood.treeNN$Flow.L.s* 60 *15
@@ -366,3 +368,20 @@ basswood.treeNN$L.p.m2  <- basswood.treeNN$L.p/basswood.treeNN$LA.m2
 
 ##############################
 #### Summary tables    ----
+
+# daily totals
+hemlock.tree.L.day <- hemlock.treeNN %>%
+  group_by(Tree.Number, doy) %>%
+  summarise(L.day = sum(L.p, na.rm=TRUE),
+            nL.day = length(na.omit(L.p)),
+            L.day.m2 = sum(L.p.m2, na.rm=TRUE),
+            nL.day.m2 = length(na.omit(L.p.m2)))
+
+basswood.tree.L.day <- basswood.treeNN %>%
+  group_by(Tree.Number, doy) %>%
+  summarise(L.day = sum(L.p, na.rm=TRUE),
+            nL.day = length(na.omit(L.p)),
+            L.day.m2 = sum(L.p.m2, na.rm=TRUE),
+            nL.day.m2 = length(na.omit(L.p.m2)))
+
+
