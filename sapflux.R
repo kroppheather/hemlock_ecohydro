@@ -354,6 +354,8 @@ hemlock.treeNN$L.p <- hemlock.treeNN$Flow.L.s* 60 *15
 #per canopy area
 hemlock.treeNN$L.p.m2  <- hemlock.treeNN$L.p/hemlock.treeNN$LA.m2
 
+hemlock.treeNN$hour1 <- floor(hemlock.treeNN$hour)
+
 #summarize total per day for each tree
 #remove NA
 basswood.treeNN <- basswood.tree %>%
@@ -364,24 +366,77 @@ basswood.treeNN$L.p <- basswood.treeNN$Flow.L.s* 60 *15
 # per canopy area
 basswood.treeNN$L.p.m2  <- basswood.treeNN$L.p/basswood.treeNN$LA.m2
 
-
+basswood.treeNN$hour1 <- floor(basswood.treeNN$hour)
 
 ##############################
 #### Summary tables    ----
 
+
+# calculate average hourly T
+hemlock.tree.L.hour <- hemlock.treeNN %>%
+  group_by(Tree.Number, doy, hour1) %>%
+  summarise(hr.L.s = mean(Flow.L.s, na.rm=TRUE),
+            sd.hr.L.s = sd(Flow.L.s, na.rm=TRUE),
+            n = length(na.omit(Flow.L.s)),
+            hr.L.s.m2 = mean(Flow.L.m2.s, na.rm=TRUE),
+            sd.hr.L.s.m2 = sd(Flow.L.m2.s, na.rm=TRUE),
+            n.m2 = length(na.omit(Flow.L.m2.s)),
+            L.p= mean(L.p, na.rm=TRUE),
+            L.p.m2 = mean(L.p.m2, na.rm=TRUE)) %>%
+  filter(n>=3)
+
+basswood.tree.L.hour <- basswood.treeNN %>%
+  group_by(Tree.Number, doy, hour1) %>%
+  summarise(hr.L.s = mean(Flow.L.s, na.rm=TRUE),
+            sd.hr.L.s = sd(Flow.L.s, na.rm=TRUE),
+            n = length(na.omit(Flow.L.s)),
+            hr.L.s.m2 = mean(Flow.L.m2.s, na.rm=TRUE),
+            sd.hr.L.s.m2 = sd(Flow.L.m2.s, na.rm=TRUE),
+            n.m2 = length(na.omit(Flow.L.m2.s)),
+            L.p= mean(L.p, na.rm=TRUE),
+            L.p.m2 = mean(L.p.m2, na.rm=TRUE)) %>%
+  filter(n>=3)
+
 # daily totals
-hemlock.tree.L.day <- hemlock.treeNN %>%
+hemlock.tree.L.day <- hemlock.tree.L.hour %>%
   group_by(Tree.Number, doy) %>%
   summarise(L.day = sum(L.p, na.rm=TRUE),
-            nL.day = length(na.omit(L.p)),
-            L.day.m2 = sum(L.p.m2, na.rm=TRUE),
-            nL.day.m2 = length(na.omit(L.p.m2)))
+            n.day = length(na.omit(L.p)),
+            L.day.m2 = sum(L.p.m2, na.rm=TRUE))
 
-basswood.tree.L.day <- basswood.treeNN %>%
+
+hemlock.L.day <- hemlock.tree.L.day %>%
+  filter(n.day >= 20) %>%
+  group_by(doy) %>%
+    summarise(L.day = mean(L.day),
+              sd.dayL = sd(L.day),
+              n.plant = n(),
+              L.m2.day = mean(L.day.m2),
+              sd.daym2 = sd(L.day.m2))%>%
+  filter(n.plant >= 3)
+ggplot(hemlock.L.day, aes(x=doy, y=L.day))+
+  geom_point()+
+  geom_line()
+
+basswood.tree.L.day <- basswood.tree.L.hour %>%
   group_by(Tree.Number, doy) %>%
   summarise(L.day = sum(L.p, na.rm=TRUE),
-            nL.day = length(na.omit(L.p)),
-            L.day.m2 = sum(L.p.m2, na.rm=TRUE),
-            nL.day.m2 = length(na.omit(L.p.m2)))
+            n.day = length(na.omit(L.p)),
+            L.day.m2 = sum(L.p.m2, na.rm=TRUE))
 
 
+basswood.L.day <- basswood.tree.L.day %>%
+  filter(n.day >= 20) %>%
+  group_by(doy) %>%
+  summarise(L.day = mean(L.day),
+            sd.dayL = sd(L.day),
+            n.plant = n(),
+            L.m2.day = mean(L.day.m2),
+            sd.daym2 = sd(L.day.m2)) %>%
+  filter(n.plant >= 3)
+
+ggplot(basswood.L.day, aes(x=doy, y=L.m2.day))+
+  geom_point()+
+  geom_line()+
+  geom_point(data=hemlock.L.day, aes(x=doy,y=L.m2.day), color="tomato3")+
+  geom_line(data=hemlock.L.day, aes(x=doy,y=L.m2.day), color="tomato3")
