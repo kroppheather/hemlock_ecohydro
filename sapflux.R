@@ -397,6 +397,17 @@ basswood.tree.L.hour <- basswood.treeNN %>%
             L.p.m2 = mean(L.p.m2, na.rm=TRUE)) %>%
   filter(n>=3)
 
+# hourly averages
+hemlock.hour <- hemlock.tree.L.hour %>%
+  group_by(doy, hour1) %>%
+  summarise(L.hr = mean(hr.L.s*60*60, na.rm=TRUE),
+            sd.L.hr = sd(hr.L.s*60*60, na.rm=TRUE),
+            n = length(na.omit(hr.L.s)),
+            L.hr.m2 = mean(hr.L.s.m2*60*60, na.rm=TRUE),
+            sd.L.hr.m2 = sd(hr.L.s.m2*60*60, na.rm=TRUE),
+            n.m2 = length(na.omit(hr.L.s.m2))) %>%
+  filter(n>=3)
+
 # daily totals
 hemlock.tree.L.day <- hemlock.tree.L.hour %>%
   group_by(Tree.Number, doy) %>%
@@ -440,3 +451,6 @@ ggplot(basswood.L.day, aes(x=doy, y=L.m2.day))+
   geom_line()+
   geom_point(data=hemlock.L.day, aes(x=doy,y=L.m2.day), color="tomato3")+
   geom_line(data=hemlock.L.day, aes(x=doy,y=L.m2.day), color="tomato3")
+
+head(basswood.tree.L.hour)
+head(hemlock.tree.L.hour)
