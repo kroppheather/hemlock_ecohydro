@@ -411,9 +411,6 @@ sapflow.hour <- tree.L.hour %>%
             T.n.m2 = length(na.omit(L.hr.m2))) %>%
   filter(T.n >= 3)
 
-ggplot(sapflow.hour, aes(doy+(hour1/24),T.L.hr.m2, color=species))+
-  geom_point()+
-  geom_line()
 
 # daily totals
 
@@ -434,10 +431,5 @@ T.L.day <- Tot.tree.L.day %>%
             sd.day.m2 = sd(Tot.L.day.m2)) %>% 
   filter(n.plant >= 3)
 
-ggplot(T.L.day, aes(doy,L.day, color=species))+
-  geom_point()+
-  geom_line()
 
-ggplot(T.L.day, aes(doy,L.day.m2, color=species))+
-  geom_point()+
-  geom_line()
+rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day"))
