@@ -24,6 +24,14 @@ tomst2 <- read.csv(paste0(dirData[dirUser],"/tomst_10_21/mixed_forest/09_17/data
 tomst3 <- read.csv(paste0(dirData[dirUser],"/tomst_10_21/mixed_forest/09_17/data_94236483_2022_09_17_0.csv"),
                    sep=";", header=FALSE )[,1:9]
 
+
+#### set up dates for weather ----
+weather$dateF <- mdy_hms(weather$Date)
+weather$doy <- yday(weather$dateF)
+weather$hour <- hour(weather$dateF)
+weather$year <- year(weather$dateF)
+#### organize soil data
+
 #tms temps:  -6, +2 and +15cm
 TMScols <- c("record","date","tz","Tm6","T2","T15","SM","shake","errFlag")
 colnames(tomst1) <- TMScols
@@ -93,6 +101,26 @@ soilDaily <- soilHourly %>%
             SWC = mean(SM, na.rm=TRUE),
             sd_SWC = sd(SM, na.rm=TRUE),
             n_SWC = length(na.omit(SM)))
+
+weatherHourly <- weather %>%
+  group_by(year, doy, hour) %>%
+  summarise(Precip = sum(Precip, na.rm=TRUE),
+            n_Precip = length(na.omit(Precip)),
+            VPD_hr = mean(VPD, na.rm=TRUE),
+            S_Rad = mean(SolRad, na.rm=TRUE),
+            Air_temp = mean(AirTemp, na.rm=TRUE))
+
+weatherHourly$DD <- weatherHourly$doy + (weatherHourly$hour/24)
+
+weatherDaily <- weatherHourly %>%
+  group_by(year, doy) %>%
+  summarise(Prec = sum(Precip, na.rm=TRUE),
+            n_Prec = length(na.omit(Precip)),
+            aveVPD = mean(VPD_hr, na.rm=TRUE),
+            maxVPD = max(VPD_hr, na.rm=TRUE),
+            max_SW = max(S_Rad, na.rm=TRUE),
+            AirT = mean(Air_temp, na.rm=TRUE))
+  
 
 
 rm(list=setdiff(ls(), c("soilDaily","soilHourly")))
