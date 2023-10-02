@@ -12,6 +12,10 @@ dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu
 
 weather <- read.csv(paste0(dirData[dirUser],"/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"),
                     skip=3, header=FALSE)
+
+colnames(weather) <- c("Date","SolRad","Precip","LightningAct","LightningDist","WindDir","WindSpeed",
+                          "GustSpeed","AirTemp","VaporPr","AtmosPr","XLevel","YLevel","MaxPrecip",
+                          "SensorTemp","VPD","BatPct","BatVolt","RefPr","LogTemp")
 # tomst sensors for hemlock
 tomst1 <- read.csv(paste0(dirData[dirUser],"/tomst_10_21/mixed_forest/09_17/data_94214743_2022_09_17_0.csv"),
                    sep=";", header=FALSE)[,1:9]
@@ -79,8 +83,7 @@ soilHourly<- soilAveH %>%
   filter(n_SM >=3)
 
 soilHourly$DD <- soilHourly$doy + (soilHourly$hour/24)
-ggplot(soilHourly, aes(DD,SM))+
-  geom_line()
+
 
 soilDaily <- soilHourly %>%
   group_by(year,doy) %>%
@@ -91,5 +94,5 @@ soilDaily <- soilHourly %>%
             sd_SWC = sd(SM, na.rm=TRUE),
             n_SWC = length(na.omit(SM)))
 
-ggplot(soilDaily, aes(doy,SWC))+
-  geom_line()
+
+rm(list=setdiff(ls(), c("soilDaily","soilHourly")))
