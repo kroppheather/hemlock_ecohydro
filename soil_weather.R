@@ -4,14 +4,20 @@ library(lubridate)
 library(ggplot2)
 library(dplyr)
 
-weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv",
+dirUser <- 2
+
+dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro",
+             "E:/Google Drive/research/projects/kirkland_ecohydro")
+
+
+weather <- read.csv(paste0(dirData[dirUser],"/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"),
                     skip=3, header=FALSE)
 # tomst sensors for hemlock
-tomst1 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro/tomst_10_21/mixed_forest/09_17/data_94214743_2022_09_17_0.csv",
+tomst1 <- read.csv(paste0(dirData[dirUser],"/tomst_10_21/mixed_forest/09_17/data_94214743_2022_09_17_0.csv"),
                    sep=";", header=FALSE)[,1:9]
-tomst2 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro/tomst_10_21/mixed_forest/09_17/data_94214744_2022_09_17_1.csv",
+tomst2 <- read.csv(paste0(dirData[dirUser],"/tomst_10_21/mixed_forest/09_17/data_94214744_2022_09_17_1.csv"),
                    sep=";", header=FALSE)[,1:9]
-tomst3 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro/tomst_10_21/mixed_forest/09_17/data_94236483_2022_09_17_0.csv",
+tomst3 <- read.csv(paste0(dirData[dirUser],"/tomst_10_21/mixed_forest/09_17/data_94236483_2022_09_17_0.csv"),
                    sep=";", header=FALSE )[,1:9]
 
 #tms temps:  -6, +2 and +15cm
@@ -41,6 +47,8 @@ tomst <- rbind(tomst1, tomst2, tomst3)
 
 tomst$dateF <- ymd_hm(tomst$date)
 tomst$estD <- with_tz(tomst$dateF,tzone="America/New_York" )
+
+# soils are silty loam. Calculate moisture based on texture
 
 tomst$SM.cor <- (-0.00000002*(tomst$SM^2)) + (0.0003*tomst$SM) -0.2062
 tomst$year <- year(tomst$estD)
@@ -72,4 +80,16 @@ soilHourly<- soilAveH %>%
 
 soilHourly$DD <- soilHourly$doy + (soilHourly$hour/24)
 ggplot(soilHourly, aes(DD,SM))+
+  geom_line()
+
+soilDaily <- soilHourly %>%
+  group_by(year,doy) %>%
+  summarise(s_temp = mean(soil_temp, na.rm = TRUE),
+            sd_st = sd(soil_temp, na.rm = TRUE),
+            n_t = length(na.omit(soil_temp)),
+            SWC = mean(SM, na.rm=TRUE),
+            sd_SWC = sd(SM, na.rm=TRUE),
+            n_SWC = length(na.omit(SM)))
+
+ggplot(soilDaily, aes(doy,SWC))+
   geom_line()

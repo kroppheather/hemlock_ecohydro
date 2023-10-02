@@ -4,15 +4,17 @@ library(dplyr)
 
 #### data directory ----
 # parent directory
+dirUser <- 2
 
-dirData <- "/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro"
+dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro",
+             "E:/Google Drive/research/projects/kirkland_ecohydro")
 
 # sap flow
-sapRaw <- read.csv(paste0(dirData,"/sapflow/09_08_2022/Sapflow_TableDT.dat"),
+sapRaw <- read.csv(paste0(dirData[dirUser],"/sapflow/09_08_2022/Sapflow_TableDT.dat"),
                   header=FALSE,skip=4,na.strings=c("NAN"))
 
 # weather station
-weather <- read.csv(paste0(dirData, "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
+weather <- read.csv(paste0(dirData[dirUser], "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
                     skip=3, header=FALSE)
 
 
@@ -21,14 +23,14 @@ colnames(weather) <- c("Date","SolRad","Precip","LightningAct","LightningDist","
                           "GustSpeed","AirTemp","VaporPr","AtmosPr","XLevel","YLevel","MaxPrecip",
                           "SensorTemp","VPD","BatPct","BatVolt","RefPr","LogTemp")
 
-weatherInfo <- read.csv(paste0(dirData, "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
+weatherInfo <- read.csv(paste0(dirData[dirUser], "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
                          nrows=3, header=FALSE)
 # allometry
-basswoodmeas <- read.csv(paste0(dirData,"/allometry/basswoodmeas.csv"))
-hemlockmeas <- read.csv(paste0(dirData,"/allometry/hemlockmeas.csv"))
-basswoodlm <- read.csv(paste0(dirData,"/allometry/DettmannMcfarlane.csv"))
+basswoodmeas <- read.csv(paste0(dirData[dirUser],"/allometry/basswoodmeas.csv"))
+hemlockmeas <- read.csv(paste0(dirData[dirUser],"/allometry/hemlockmeas.csv"))
+basswoodlm <- read.csv(paste0(dirData[dirUser],"/allometry/DettmannMcfarlane.csv"))
 # sensor info
-sensors <- read.csv(paste0(dirData,"/sapflow/sensordata_061522.csv"))
+sensors <- read.csv(paste0(dirData[dirUser],"/sapflow/sensordata_061522.csv"))
 
 
 #### sapwood ----
