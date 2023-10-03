@@ -77,7 +77,8 @@ soilAveH <- tomst %>%
             AH_n_temp = length(na.omit(Tm6)),
             AH_SM = mean(SM.cor, na.rm=TRUE),
             AH_sd_SM = sd(SM.cor, na.rm=TRUE),
-            AH_n_SM = length(na.omit(SM.cor)))
+            AH_n_SM = length(na.omit(SM.cor))) %>%
+    filter(doy >= 160 & doy <= 251 &  year == 2022)
 
 # average over sensors
 soilHourly<- soilAveH %>%
@@ -108,7 +109,8 @@ weatherHourly <- weather %>%
             n_Precip = length(na.omit(Precip)),
             VPD_hr = mean(VPD, na.rm=TRUE),
             S_Rad = mean(SolRad, na.rm=TRUE),
-            Air_temp = mean(AirTemp, na.rm=TRUE))
+            Air_temp = mean(AirTemp, na.rm=TRUE))%>%
+  filter(doy >= 160 & doy <= 251 &  year == 2022)
 
 weatherHourly$DD <- weatherHourly$doy + (weatherHourly$hour/24)
 
@@ -123,4 +125,4 @@ weatherDaily <- weatherHourly %>%
   
 
 
-rm(list=setdiff(ls(), c("soilDaily","soilHourly")))
+rm(list=setdiff(ls(), c("soilDaily","soilHourly", "weatherDaily", "weatherHourly","T.L.day","sapflow.hour", "Tot.tree.L.day","dirScript")))

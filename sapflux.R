@@ -434,6 +434,6 @@ T.L.day <- Tot.tree.L.day %>%
   filter(n.plant >= 3)
 
 
-rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day")))
+rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript")))
 
    
