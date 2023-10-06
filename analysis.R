@@ -56,7 +56,25 @@ ggplot(sapAll %>% filter(S_Rad > 0 & doy == 173), aes(VPD_hr, T.L.hr, color=spec
   geom_point()+
   geom_path()
 
+
+# evaluate degree of hysteresis
+# ensure that all dates and times are present
+# create data frame with all possible times and dates
+
+# realized that I need to do this step then join weather so historical VPD can get included properly
+Sap_hemlock <- sapAll %>%
+  filter(species == "hemlock")
+
+dateAll <- data.frame( doy = rep(seq(160,151), each=24),
+                       hour = rep(seq(0,23), times=length(seq(160,151))))
+
+sapDates <- full_join(dateAll, sapAll, by=c("doy","hour","species"))
+
+
+
 # daily patterns in data
+
+
 
 ggplot(Tc.L.day, aes(maxVPD, L.day, color=species))+
   geom_point()
