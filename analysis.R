@@ -55,39 +55,82 @@ bassWeather <- full_join(weatherHourly, bassDateFill, by=c("doy","hour"))
 hemWeather <- full_join(weatherHourly, hemDateFill, by=c("doy","hour"))
 
 #get data frame of historical VPD
-vPD_df <- 
+VPD_sub <- data.frame(doy = weatherHourly$doy,
+                      hour = weatherHourly$hour,
+                      VPD = weatherHourly$VPD_hr,
+                      SRad = weatherHourly$S_Rad)
 
+# ensure data is complete
+VPD_df <- full_join(VPD_sub, dateAll, by=c("doy","hour"))
+VPD_df <- VPD_df %>%
+  arrange(doy, hour)
+# get 1 hour before
+VPD_df$VPD_m1 <- c(NA,VPD_df$VPD[1:(length(VPD_df$VPD)-1)])
+VPD_df$SRad_m1 <- c(NA, VPD_df$SRad[1:(length(VPD_df$SRad)-1)])
+# 2 hours prior
+VPD_df$VPD_m2 <- c(NA,NA,VPD_df$VPD[1:(length(VPD_df$VPD)-2)])
+VPD_df$SRad_m2 <- c(NA, NA, VPD_df$SRad[1:(length(VPD_df$SRad)-2)])
 
+# 3 hours prior
+VPD_df$VPD_m3 <- c(NA,NA,NA,VPD_df$VPD[1:(length(VPD_df$VPD)-3)])
+VPD_df$SRad_m3 <- c(NA, NA,NA, VPD_df$SRad[1:(length(VPD_df$SRad)-3)])
 
+# 4 hours prior
+VPD_df$VPD_m4 <- c(NA,NA,NA,NA,VPD_df$VPD[1:(length(VPD_df$VPD)-4)])
+VPD_df$SRad_m4 <- c(NA, NA,NA, NA, VPD_df$SRad[1:(length(VPD_df$SRad)-4)])
 
+VPD_dfJ <- VPD_df %>%
+  select(!c(VPD, SRad))
 
+bassH_all <- left_join(bassWeather, VPD_dfJ, by=c("doy", "hour"))
+hemH_all <- left_join(hemWeather, VPD_dfJ, by=c("doy", "hour"))
 
-ggplot(sapAll %>% filter(S_Rad > 0), aes(VPD_hr, T.L.hr, color=species))+
+sap_all <- rbind(bassH_all, hemH_all)
+
+# join in some daily weather stats for quality filters
+dailyPrecip <- data.frame( doy = weatherDaily$doy,
+                           dayPrec = weatherDaily$Prec)
+
+sap_all <- left_join(sap_all, dailyPrecip, by="doy")
+
+sap_analysis <- sap_all %>%
+  filter(dayPrec <= 4) %>% # only take days with trace precip amounts less than or equal to 4 mm
+  filter(hour >= 6 & hour <= 19 ) %>%
+  filter(VPD_hr > 0.25)
+
+ggplot(sap_analysis, aes(VPD_hr, T.L.hr, color=species))+
   geom_point()
+
 # check for hysteresis in hourly
-ggplot(sapAll %>% filter(S_Rad > 0 & doy == 168), aes(VPD_hr, T.L.hr, color=species))+
+ggplot(sap_analysis %>% filter(doy == 168), aes(VPD_hr, T.L.hr, color=species))+
   geom_point()+
   geom_path()
 
-ggplot(sapAll %>% filter(S_Rad > 0 & doy == 173), aes(VPD_hr, T.L.hr, color=species))+
+ggplot(sap_analysis %>% filter(doy == 168), aes(VPD_m4, T.L.hr, color=species))+
+  geom_point()+
+  geom_path()
+ggplot(sap_analysis %>% filter(doy == 168), aes(VPD_hr, T.L.hr, color=species))+
+  geom_point()
+
+ggplot(sap_analysis %>% filter(doy == 168), aes(VPD_m4, T.L.hr, color=species))+
+  geom_point()
+
+ggplot(sap_analysis %>% filter(doy == 173), aes(VPD_m1, T.L.hr, color=species))+
   geom_point()+
   geom_path()
 
+ggplot(sap_analysis %>% filter(doy == 173), aes(S_Rad, T.L.hr, color=species))+
+  geom_point()+
+  geom_path()
 
+ggplot(sap_analysis %>% filter(doy == 173), aes(SRad_m4, T.L.hr, color=species))+
+  geom_point()+
+  geom_path()
 # evaluate degree of hysteresis
-# ensure that all dates and times are present
-# create data frame with all possible times and dates
-
-# realized that I need to do this step then join weather so historical VPD can get included properly
-Sap_hemlock <- sapAll %>%
-  filter(species == "hemlock")
-
-dateAll <- data.frame( doy = rep(seq(160,151), each=24),
-                       hour = rep(seq(0,23), times=length(seq(160,151))))
-
-sapDates <- full_join(dateAll, sapAll, by=c("doy","hour","species"))
-
-
+bass_analysis <- sap_analysis %>%
+  filter(species == "basswood")
+mod.CB <- lm(bass_analysis$T.L.hr ~ log(bass_analysis$VPD_hr))
+summary(mod.CB)
 
 # daily patterns in data
 
