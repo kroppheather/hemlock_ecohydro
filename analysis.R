@@ -126,11 +126,46 @@ ggplot(sap_analysis %>% filter(doy == 173), aes(S_Rad, T.L.hr, color=species))+
 ggplot(sap_analysis %>% filter(doy == 173), aes(SRad_m4, T.L.hr, color=species))+
   geom_point()+
   geom_path()
+
+ggplot(sap_analysis %>% filter(doy == 173), aes(S_Rad, T.L.hr, color=species))+
+  geom_point()
+
+ggplot(sap_analysis %>% filter(doy == 173), aes(VPD_hr, T.L.hr, color=species))+
+  geom_point()
 # evaluate degree of hysteresis
 bass_analysis <- sap_analysis %>%
   filter(species == "basswood")
-mod.CB <- lm(bass_analysis$T.L.hr ~ log(bass_analysis$VPD_hr))
+
+hem_analysis <- sap_analysis %>%
+  filter(species == "hemlock")
+
+##### Assess hysteresis ----
+# current
+
+plot(log(bass_analysis$VPD_hr),bass_analysis$T.L.hr)
+plot(log(bass_analysis$VPD_m1),bass_analysis$T.L.hr)
+plot(log(bass_analysis$VPD_m2),bass_analysis$T.L.hr)
+plot(log(bass_analysis$VPD_m3),bass_analysis$T.L.hr)
+plot(log(bass_analysis$VPD_m4),bass_analysis$T.L.hr)
+
+plot(log(hem_analysis$VPD_hr),hem_analysis$T.L.hr)
+plot(log(hem_analysis$VPD_m1),hem_analysis$T.L.hr)
+plot(log(hem_analysis$VPD_m2),hem_analysis$T.L.hr)
+plot(log(hem_analysis$VPD_m3),hem_analysis$T.L.hr)
+
+modDay <- bass_analysis %>%
+  filter(doy == 173)
+
+mod.CB <- lm(modDay$T.L.hr ~ log(modDay$VPD_hr))
 summary(mod.CB)
+mod.m1B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m1))
+summary(mod.m1B)
+
+mod.m2B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m2))
+summary(mod.m2B)
+
+mod.m3B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m4))
+summary(mod.m4B)
 
 # daily patterns in data
 
