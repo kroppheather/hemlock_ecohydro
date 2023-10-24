@@ -55,7 +55,7 @@ bassWeather <- full_join(weatherHourly, bassDateFill, by=c("doy","hour"))
 hemWeather <- full_join(weatherHourly, hemDateFill, by=c("doy","hour"))
 
 
-sap_all <- rbind(bassH_all, hemH_all)
+sap_all <- rbind(bassWeather, hemWeather)
 
 # join in some daily weather stats for quality filters
 dailyPrecip <- data.frame( doy = weatherDaily$doy,
@@ -75,9 +75,15 @@ sap_analysis <- sap_all %>%
   filter(hour >= 7 & hour <= 18 ) %>%
   filter(VPD_hr > 0.25)
 
+dailyAllt1 <- left_join(weatherDaily, dailyPrecip[,c(1,3)], by="doy")
+dailyAll <- left_join(dailyAllt1, soilDaily, by=c("doy", "year"))
 
 
+ggplot(dailyAll, aes(doy, SWC))+
+  geom_line()
 
 
-
+ggplot(T.L.day, aes(doy, L.day.m2, color=species))+
+  geom_line()+
+  geom_point()
 
