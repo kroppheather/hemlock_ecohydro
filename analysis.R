@@ -60,6 +60,13 @@ sap_all <- rbind(bassH_all, hemH_all)
 # join in some daily weather stats for quality filters
 dailyPrecip <- data.frame( doy = weatherDaily$doy,
                            dayPrec = weatherDaily$Prec)
+weeklyPrecip <- rep(NA,6)
+for(i in 7:nrow(dailyPrecip)){
+  weeklyPrecip[i] <- sum(dailyPrecip$dayPrec[(i-6):i])
+}
+
+dailyPrecip$weekPr <- weeklyPrecip
+
 
 sap_all <- left_join(sap_all, dailyPrecip, by="doy")
 
@@ -67,3 +74,10 @@ sap_analysis <- sap_all %>%
   filter(dayPrec <= 4) %>% # only take days with trace precip amounts less than or equal to 4 mm
   filter(hour >= 7 & hour <= 18 ) %>%
   filter(VPD_hr > 0.25)
+
+
+
+
+
+
+

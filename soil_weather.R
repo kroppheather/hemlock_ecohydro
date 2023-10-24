@@ -17,11 +17,11 @@ colnames(weather) <- c("Date","SolRad","Precip","LightningAct","LightningDist","
                           "GustSpeed","AirTemp","VaporPr","AtmosPr","XLevel","YLevel","MaxPrecip",
                           "SensorTemp","VPD","BatPct","BatVolt","RefPr","LogTemp")
 # tomst sensors for hemlock
-tomst1 <- read.csv(paste0(dirData[dirUser],"/tomst_10_21/mixed_forest/09_17/data_94214743_2022_09_17_0.csv"),
+tomst1 <- read.csv(paste0(dirData[dirUser],"/tomst_09_23/data_94214743_2023_09_20_0.csv"),
                    sep=";", header=FALSE)[,1:9]
-tomst2 <- read.csv(paste0(dirData[dirUser],"/tomst_10_21/mixed_forest/09_17/data_94214744_2022_09_17_1.csv"),
+tomst2 <- read.csv(paste0(dirData[dirUser],"/tomst_09_23/data_94214744_2023_09_20_0.csv"),
                    sep=";", header=FALSE)[,1:9]
-tomst3 <- read.csv(paste0(dirData[dirUser],"/tomst_10_21/mixed_forest/09_17/data_94236483_2022_09_17_0.csv"),
+tomst3 <- read.csv(paste0(dirData[dirUser],"/tomst_09_23/data_94236483_2023_09_20_0.csv"),
                    sep=";", header=FALSE )[,1:9]
 
 
