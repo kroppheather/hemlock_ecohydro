@@ -336,7 +336,7 @@ hpS <- data.frame(doy = rep(hemDFmod, times=4),
                   lag = rep(c("current","-1","-2","-3"), each=nrow(hemDFmod)),
                   pS = c(hemDFmod$pslopeC, hemDFmod$pslopem1B,
                          hemDFmod$pslopem2B, hemDFmod$pslopem3B))
-ggplot(bpS, aes(lag,pS))+
+ggplot(hpS, aes(lag,pS))+
   geom_boxplot()
 
 hrpS <- data.frame(doy = rep(hemDFmod, times=4),
@@ -345,5 +345,5 @@ hrpS <- data.frame(doy = rep(hemDFmod, times=4),
                          hemDFmod$rsqm2B, hemDFmod$rsqm3B))
 
 
-ggplot(rpS, aes(lag,pS))+
+ggplot(hrpS, aes(lag,rS))+
   geom_boxplot()
