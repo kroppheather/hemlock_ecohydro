@@ -95,7 +95,7 @@ sap_all <- left_join(sap_all, dailyPrecip, by="doy")
 
 sap_analysis <- sap_all %>%
   filter(dayPrec <= 4) %>% # only take days with trace precip amounts less than or equal to 4 mm
-  filter(hour >= 6 & hour <= 19 ) %>%
+  filter(hour >= 7 & hour <= 18 ) %>%
   filter(VPD_hr > 0.25)
 
 ggplot(sap_analysis, aes(VPD_hr, T.L.hr, color=species))+
@@ -153,36 +153,197 @@ plot(log(hem_analysis$VPD_m1),hem_analysis$T.L.hr)
 plot(log(hem_analysis$VPD_m2),hem_analysis$T.L.hr)
 plot(log(hem_analysis$VPD_m3),hem_analysis$T.L.hr)
 
+
+# look at hysteresis on a daily basis for basswood
+
+
+DaysB <- unique(bass_analysis$doy)
 modDay <- bass_analysis %>%
-  filter(doy == 173)
+  filter(doy == 222)
+intC <- numeric()
+slopeC <- numeric()
+pslopeC <- numeric()
+rsqC <- numeric()
 
-mod.CB <- lm(modDay$T.L.hr ~ log(modDay$VPD_hr))
-summary(mod.CB)
-mod.m1B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m1))
-summary(mod.m1B)
+intm1B <- numeric()
+slopem1B <- numeric()
+pslopem1B <- numeric()
+rsqm1B <- numeric()
 
-mod.m2B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m2))
-summary(mod.m2B)
+intm2B <- numeric()
+slopem2B <- numeric()
+pslopem2B <- numeric()
+rsqm2B <- numeric()
 
-mod.m3B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m4))
-summary(mod.m4B)
+intm3B <- numeric()
+slopem3B <- numeric()
+pslopem3B <- numeric()
+rsqm3B <- numeric()
+
+for(i in 1:length(DaysB)){
+  modDay <- bass_analysis %>%
+    filter(doy == DaysB[i])  
+  # current
+  mod.CB <- lm(modDay$T.L.hr ~ log(modDay$VPD_hr))
+  intC[i] <- summary(mod.CB)$coefficients[1,1]
+  slopeC[i] <- summary(mod.CB)$coefficients[2,1]
+  pslopeC[i] <- summary(mod.CB)$coefficients[2,4]
+  rsqC[i] <- summary(mod.CB)$r.squared 
+  # minus 1 hour
+  mod.m1B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m1))
+  summary(mod.m1B)
+  intm1B[i] <- summary(mod.m1B)$coefficients[1,1]
+  slopem1B[i] <- summary(mod.m1B)$coefficients[2,1]
+  pslopem1B[i] <- summary(mod.m1B)$coefficients[2,4]
+  rsqm1B[i] <- summary(mod.m1B)$r.squared   
+  # minus 2 hour
+  mod.m2B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m2))
+  summary(mod.m2B)
+  intm2B[i] <- summary(mod.m2B)$coefficients[1,1]
+  slopem2B[i] <- summary(mod.m2B)$coefficients[2,1]
+  pslopem2B[i] <- summary(mod.m2B)$coefficients[2,4]
+  rsqm2B[i] <- summary(mod.m2B)$r.squared 
+  # minus 3 hour
+  mod.m3B <- lm(modDay$T.L.hr ~ log(ifelse(modDay$VPD_m3 == 0,NA,modDay$VPD_m3)))
+  summary(mod.m3B)
+  intm3B[i] <- summary(mod.m3B)$coefficients[1,1]
+  slopem3B[i] <- summary(mod.m3B)$coefficients[2,1]
+  pslopem3B[i] <- summary(mod.m3B)$coefficients[2,4]
+  rsqm3B[i] <- summary(mod.m3B)$r.squared 
+}
+
+
+bassDFmod <- data.frame(doy = DaysB,
+                        intC = intC,
+                        slopeC = slopeC,
+                        pslopeC = pslopeC,
+                        rsqC = rsqC,
+                        intm1B = intm1B,
+                        slopem1B = slopem1B,
+                        pslopem1B = pslopem1B,
+                        rsqm1B = rsqm1B,
+                        intm2B = intm2B,
+                        slopem2B = slopem1B,
+                        pslopem2B = pslopem2B,
+                        rsqm2B = rsqm2B,
+                        intm3B = intm3B,
+                        slopem3B = slopem3B,
+                        pslopem3B = pslopem3B,
+                        rsqm3B = rsqm3B)
+
+# look at sig of slope
+
+bpS <- data.frame(doy = rep(bassDFmod, times=4),
+                  lag = rep(c("current","-1","-2","-3"), each=nrow(bassDFmod)),
+                  pS = c(bassDFmod$pslopeC, bassDFmod$pslopem1B,
+                         bassDFmod$pslopem2B, bassDFmod$pslopem3B))
+ggplot(bpS, aes(lag,pS))+
+  geom_boxplot()
+
+rpS <- data.frame(doy = rep(bassDFmod, times=4),
+                  lag = rep(c("current","-1","-2","-3"), each=nrow(bassDFmod)),
+                  pS = c(bassDFmod$rsqC, bassDFmod$rsqm1B,
+                         bassDFmod$rsqm2B, bassDFmod$rsqm3B))
+
+
+ggplot(rpS, aes(lag,pS))+
+  geom_boxplot()
+
+
+
 
 # daily patterns in data
+# look at hysteresis on a daily basis for hemlock
 
 
+DaysB <- unique(hem_analysis$doy)
+modDay <- hem_analysis %>%
+  filter(doy == 222)
+intC <- numeric()
+slopeC <- numeric()
+pslopeC <- numeric()
+rsqC <- numeric()
 
-ggplot(Tc.L.day, aes(maxVPD, L.day, color=species))+
-  geom_point()
+intm1B <- numeric()
+slopem1B <- numeric()
+pslopem1B <- numeric()
+rsqm1B <- numeric()
 
-ggplot(Tc.L.day, aes(maxVPD, L.day.m2, color=species))+
-  geom_point()
+intm2B <- numeric()
+slopem2B <- numeric()
+pslopem2B <- numeric()
+rsqm2B <- numeric()
 
-ggplot(Tc.L.day, aes(SWC, L.day, color=species))+
-  geom_point()
+intm3B <- numeric()
+slopem3B <- numeric()
+pslopem3B <- numeric()
+rsqm3B <- numeric()
 
-ggplot(Tc.L.day, aes(AirT, L.day, color=species))+
-  geom_point()
+for(i in 1:length(DaysB)){
+  modDay <- hem_analysis %>%
+    filter(doy == DaysB[i])  
+  # current
+  mod.CB <- lm(modDay$T.L.hr ~ log(modDay$VPD_hr))
+  intC[i] <- summary(mod.CB)$coefficients[1,1]
+  slopeC[i] <- summary(mod.CB)$coefficients[2,1]
+  pslopeC[i] <- summary(mod.CB)$coefficients[2,4]
+  rsqC[i] <- summary(mod.CB)$r.squared 
+  # minus 1 hour
+  mod.m1B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m1))
+  summary(mod.m1B)
+  intm1B[i] <- summary(mod.m1B)$coefficients[1,1]
+  slopem1B[i] <- summary(mod.m1B)$coefficients[2,1]
+  pslopem1B[i] <- summary(mod.m1B)$coefficients[2,4]
+  rsqm1B[i] <- summary(mod.m1B)$r.squared   
+  # minus 2 hour
+  mod.m2B <- lm(modDay$T.L.hr ~ log(modDay$VPD_m2))
+  summary(mod.m2B)
+  intm2B[i] <- summary(mod.m2B)$coefficients[1,1]
+  slopem2B[i] <- summary(mod.m2B)$coefficients[2,1]
+  pslopem2B[i] <- summary(mod.m2B)$coefficients[2,4]
+  rsqm2B[i] <- summary(mod.m2B)$r.squared 
+  # minus 3 hour
+  mod.m3B <- lm(modDay$T.L.hr ~ log(ifelse(modDay$VPD_m3 == 0,NA,modDay$VPD_m3)))
+  summary(mod.m3B)
+  intm3B[i] <- summary(mod.m3B)$coefficients[1,1]
+  slopem3B[i] <- summary(mod.m3B)$coefficients[2,1]
+  pslopem3B[i] <- summary(mod.m3B)$coefficients[2,4]
+  rsqm3B[i] <- summary(mod.m3B)$r.squared 
+}
 
 
-ggplot(Tc.L.day, aes(max_SW, L.day, color=species))+
-  geom_point()
+hemDFmod <- data.frame(doy = DaysB,
+                        intC = intC,
+                        slopeC = slopeC,
+                        pslopeC = pslopeC,
+                        rsqC = rsqC,
+                        intm1B = intm1B,
+                        slopem1B = slopem1B,
+                        pslopem1B = pslopem1B,
+                        rsqm1B = rsqm1B,
+                        intm2B = intm2B,
+                        slopem2B = slopem1B,
+                        pslopem2B = pslopem2B,
+                        rsqm2B = rsqm2B,
+                        intm3B = intm3B,
+                        slopem3B = slopem3B,
+                        pslopem3B = pslopem3B,
+                        rsqm3B = rsqm3B)
+
+# look at sig of slope
+
+hpS <- data.frame(doy = rep(hemDFmod, times=4),
+                  lag = rep(c("current","-1","-2","-3"), each=nrow(hemDFmod)),
+                  pS = c(hemDFmod$pslopeC, hemDFmod$pslopem1B,
+                         hemDFmod$pslopem2B, hemDFmod$pslopem3B))
+ggplot(bpS, aes(lag,pS))+
+  geom_boxplot()
+
+hrpS <- data.frame(doy = rep(hemDFmod, times=4),
+                  lag = rep(c("current","-1","-2","-3"), each=nrow(hemDFmod)),
+                  rS = c(hemDFmod$rsqC, hemDFmod$rsqm1B,
+                         hemDFmod$rsqm2B, hemDFmod$rsqm3B))
+
+
+ggplot(rpS, aes(lag,pS))+
+  geom_boxplot()
