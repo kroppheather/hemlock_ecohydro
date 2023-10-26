@@ -1,5 +1,5 @@
 #######################################
-## Analysis of Hemlock and Basswood  ##
+## Figures for Hemlock and Basswood  ##
 ## sap flux and canopy T with soil   ##
 ## moisture and weather              ##
 #######################################
@@ -13,7 +13,7 @@ library(dplyr)
 dirUser <- 2
 
 dirScriptAll <- c("/Users/hkropp/Documents/GitHub/hemlock_ecohydro",
-               "c:/Users/hkropp/Documents/GitHub/hemlock_ecohydro")
+                  "c:/Users/hkropp/Documents/GitHub/hemlock_ecohydro")
 
 dirScript <- dirScriptAll[2]
 
@@ -34,7 +34,7 @@ source(paste0(dirScript, "/sapflux.r"))
 
 source(paste0(dirScript, "/soil_weather.r"))
 
-#### explore basic data patterns  ----
+#### organize data  ----
 # daily data
 T.L.dayW <- left_join(weatherDaily, T.L.day, by=c("doy"))
 Tc.L.day <- left_join(T.L.dayW , soilDaily, by="doy")
@@ -84,3 +84,11 @@ sap_count <- sap_analysis %>%
   group_by(doy,species) %>%
   summarise(ncount = n()) %>%
   filter(ncount >= 6)
+
+
+
+########### Figure 1 -----------
+
+
+
+
