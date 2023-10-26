@@ -305,6 +305,7 @@ basswood.tree$sap.aream2 <-  0.0001*basswood.tree$sap.areacm2
 #mean basswood weight = 22.1324289 g/m2
 #1/slw = 0.04518257
 
+# data from supplement in dettman mcfarlane
 blm <- basswoodlm %>%
       filter(SPECIES =="Tilia americana")
 plot(log(blm$DBH_CM), log(blm$LEAF_DRY_MASS_KG))
@@ -314,12 +315,9 @@ summary(b.mod)
 
 basswood.tree$biomass.kg = exp(-4.25 + 1.79*(log(basswood.tree$DBH..cm.)))
 
-basswood.tree$biomass.g <- basswood.tree$biomass.kg*1000
 
-#*total grams of leaves
-
-#conversion from Jurik 1986
-basswood.tree$LA.m2 <- 0.04518257*basswood.tree$biomass.g
+#conversion from Ewers et al SLA averaged over two years (in m2/kg)
+basswood.tree$LA.m2 <- ((34.8+32.4)/2)*basswood.tree$biomass.kg
 
 #leaf area in m2 for hemlock, from Kenefic et al
 hemlock.tree$LA.m2 <- 7.5432 + (0.3659*(hemlock.tree$sap.areacm2))
