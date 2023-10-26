@@ -130,7 +130,7 @@ png(paste0(dirFig, "/fig_1_met_t.png"), width=9, height=6,
 layout(matrix(seq(1,4),ncol=2, byrow=TRUE), width=lcm(rep(wd*2.54,2)),height=lcm(c(hd)*2.54))
 
 par(mai=c(0.5,0.5,0.5,0.5))
-plot(c(0,1),c(0,1), type="n", axes=FALSE, xaxs="i", yaxs="i", xlab= " ", 
+plot(c(0,1),c(0,1), type="n", axes=FALSE, xlab= " ", 
      ylab=" ", xlim=c(xl,xh), ylim=c(yl1,yh1))
 for(i in 1:nrow(dailyAll)){
   polygon(c(dailyAll$doy[i]-0.25,dailyAll$doy[i]-0.25,
@@ -143,22 +143,22 @@ points(dailyAll$doy, dailyAll$SWC, type="l")
 
 
 par(mai=c(0.5,0.5,0.5,0.5))
-plot(c(0,1),c(0,1), type="n", axes=FALSE, xaxs="i", yaxs="i", xlab= " ", 
+plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
      ylab=" ", xlim=c(xl,xh), ylim=c(yl2,yh2))
 
 points(dailyAll$doy, dailyAll$maxVPD, type="l")      
 
 par(mai=c(0.5,0.5,0.5,0.5))
 
-plot(c(0,1),c(0,1), type="n", axes=FALSE, xaxs="i", yaxs="i", xlab= " ", 
+plot(c(0,1),c(0,1), type="n", axes=FALSE, xlab= " ", 
      ylab=" ", xlim=c(xl,xh), ylim=c(yl3,yh3))
 
 points(bassDay$doy, bassDay$L.day, type="b",pch=19, col=basscol)
 arrows(bassDay$doy,bassDay$L.day+bassDay$se.L.day,
-       bassDay$doy,bassDay$L.day-bassDay$se.L.day,code=0)
+       bassDay$doy,bassDay$L.day-bassDay$se.L.day,code=0, col=basscolt)
 points(hemDay$doy, hemDay$L.day, type="b",pch=19, col=hemcol)
 arrows(hemDay$doy,hemDay$L.day+hemDay$se.L.day,
-       hemDay$doy,hemDay$L.day-hemDay$se.L.day,code=0)
+       hemDay$doy,hemDay$L.day-hemDay$se.L.day,code=0, col=hemcolt)
 
 par(mai=c(0.5,0.5,0.5,0.5))
 
