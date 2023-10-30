@@ -48,8 +48,8 @@ Sap_hemlock <- sapflow.hour %>%
 Sap_basswood <- sapflow.hour %>%
   filter(species == "basswood")
 
-dateAll <- data.frame( doy = rep(seq(160,151), each=24),
-                       hour = rep(seq(0,23), times=length(seq(160,151))))
+dateAll <- data.frame( doy = rep(seq(160,252), each=24),
+                       hour = rep(seq(0,23), times=length(seq(160,252))))
 
 hemDateFill <- full_join(dateAll, Sap_hemlock, by=c("doy","hour"="hour1"))
 bassDateFill <- full_join(dateAll, Sap_basswood, by=c("doy","hour"="hour1"))
@@ -89,11 +89,16 @@ sap_count <- sap_analysis %>%
   filter(ncount >= 6)
 
 
+# join in full day list to ensure gaps aren't connected
+doyAll <- data.frame( doy = seq(160,252))
+                      
 bassDay <- Tc.L.day %>%
   filter(species == "basswood")
+bassDay <- left_join(doyAll,bassDay, by="doy")
 
 hemDay <- Tc.L.day %>%
   filter(species == "hemlock")
+hemDay <- left_join(doyAll,hemDay, by="doy")
 
 ########### Figure 1 -----------
 basscol <- "#4091E5"
@@ -102,7 +107,7 @@ hemcol <- "#3a5a40"
 hemcolt <- "#3a5a4099"
 
 hd <- 2.5
-wd <- 4
+wd <- 5
 xl <- 168
 xh <- 250
 yl1 <- 0
@@ -112,10 +117,7 @@ yl2 <- 0
 yh2 <- 2.5
 
 yl3 <- 0
-yh3 <- 36
-
-yl4 <- 0
-yh4 <- 0.2
+yh3 <- 0.2
 
 
 
@@ -123,11 +125,11 @@ precipScale <- yh1/ceiling(max(dailyAll$Prec))
 test <- dailyAll$Prec* precipScale
 
 
-png(paste0(dirFig, "/fig_1_met_t.png"), width=9, height=6,
+png(paste0(dirFig, "/fig_1_met_t.png"), width=7, height=8,
     units="in", res=300 )
 
 
-layout(matrix(seq(1,4),ncol=2, byrow=TRUE), width=lcm(rep(wd*2.54,2)),height=lcm(c(hd)*2.54))
+layout(matrix(seq(1,3),ncol=1, byrow=TRUE), width=lcm(rep(wd*2.54,1)),height=lcm(rep(hd*2.54,3)))
 
 par(mai=c(0.5,0.5,0.5,0.5))
 plot(c(0,1),c(0,1), type="n", axes=FALSE, xlab= " ", 
@@ -141,29 +143,17 @@ for(i in 1:nrow(dailyAll)){
 points(dailyAll$doy, dailyAll$SWC, type="l") 
 
 
-
 par(mai=c(0.5,0.5,0.5,0.5))
 plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
      ylab=" ", xlim=c(xl,xh), ylim=c(yl2,yh2))
 
 points(dailyAll$doy, dailyAll$maxVPD, type="l")      
 
-par(mai=c(0.5,0.5,0.5,0.5))
-
-plot(c(0,1),c(0,1), type="n", axes=FALSE, xlab= " ", 
-     ylab=" ", xlim=c(xl,xh), ylim=c(yl3,yh3))
-
-points(bassDay$doy, bassDay$L.day, type="b",pch=19, col=basscol)
-arrows(bassDay$doy,bassDay$L.day+bassDay$se.L.day,
-       bassDay$doy,bassDay$L.day-bassDay$se.L.day,code=0, col=basscolt)
-points(hemDay$doy, hemDay$L.day, type="b",pch=19, col=hemcol)
-arrows(hemDay$doy,hemDay$L.day+hemDay$se.L.day,
-       hemDay$doy,hemDay$L.day-hemDay$se.L.day,code=0, col=hemcolt)
 
 par(mai=c(0.5,0.5,0.5,0.5))
 
 plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
-     ylab=" ", xlim=c(xl,xh), ylim=c(yl4,yh4))
+     ylab=" ", xlim=c(xl,xh), ylim=c(yl3,yh3))
 
 points(bassDay$doy, bassDay$L.day.m2, type="b",pch=19, col=basscol)
 arrows(bassDay$doy,bassDay$L.day.m2+bassDay$se.L.m2.day,
