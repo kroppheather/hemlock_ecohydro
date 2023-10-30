@@ -106,10 +106,15 @@ basscolt <- "#4091E599"
 hemcol <- "#3a5a40"
 hemcolt <- "#3a5a4099"
 
-hd <- 2.5
+hd <- 2
 wd <- 5
 xl <- 168
 xh <- 250
+xseq <- seq(160,260,by=10)
+y1seq <- seq(0,0.5,by=0.1)
+y2seq <- seq(0,2.4,by=0.2)
+y3seq <- seq(0,0.14,by=0.02)
+y4seq <- seq(0,0.02,by=0.01)
 yl1 <- 0
 yh1 <- 0.5
 
@@ -117,7 +122,16 @@ yl2 <- 0
 yh2 <- 2.5
 
 yl3 <- 0
-yh3 <- 0.2
+yh3 <- 0.15
+
+yl4 <- 0
+yh4 <- 0.025
+
+#axis tick label size
+cax <- 1.5
+
+# plot lines width
+lw <- 1.5
 
 
 
@@ -125,13 +139,13 @@ precipScale <- yh1/ceiling(max(dailyAll$Prec))
 test <- dailyAll$Prec* precipScale
 
 
-png(paste0(dirFig, "/fig_1_met_t.png"), width=7, height=8,
-    units="in", res=300 )
+png(paste0(dirFig, "/fig_1_met_t.png"), width=7, height=9,
+    units="in", res=500 )
 
 
-layout(matrix(seq(1,3),ncol=1, byrow=TRUE), width=lcm(rep(wd*2.54,1)),height=lcm(rep(hd*2.54,3)))
+layout(matrix(seq(1,4),ncol=1, byrow=TRUE), width=lcm(rep(wd*2.54,1)),height=lcm(rep(hd*2.54,4)))
 
-par(mai=c(0.5,0.5,0.5,0.5))
+par(mai=c(0.25,0.25,0.25,0.25))
 plot(c(0,1),c(0,1), type="n", axes=FALSE, xlab= " ", 
      ylab=" ", xlim=c(xl,xh), ylim=c(yl1,yh1))
 for(i in 1:nrow(dailyAll)){
@@ -140,27 +154,41 @@ for(i in 1:nrow(dailyAll)){
           c(0,dailyAll$Prec[i],dailyAll$Prec[i],0)*precipScale,
           border=NA, col="#C6DAF4")
 }
-points(dailyAll$doy, dailyAll$SWC, type="l") 
+points(dailyAll$doy, dailyAll$SWC, type="l", lwd=lw) 
+axis(1, xseq, cex.axis=cax )
+axis(2, y1seq, cex.axis=cax, las=2 )
 
-
-par(mai=c(0.5,0.5,0.5,0.5))
+par(mai=c(0.25,0.25,0.25,0.25))
 plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
      ylab=" ", xlim=c(xl,xh), ylim=c(yl2,yh2))
 
-points(dailyAll$doy, dailyAll$maxVPD, type="l")      
+points(dailyAll$doy, dailyAll$maxVPD, type="l", lwd=lw)      
+axis(1, xseq, cex.axis=cax )
+axis(2, y2seq, cex.axis=cax, las=2 )
 
-
-par(mai=c(0.5,0.5,0.5,0.5))
+par(mai=c(0.25,0.25,0.25,0.25))
 
 plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
      ylab=" ", xlim=c(xl,xh), ylim=c(yl3,yh3))
 
-points(bassDay$doy, bassDay$L.day.m2, type="b",pch=19, col=basscol)
-arrows(bassDay$doy,bassDay$L.day.m2+bassDay$se.L.m2.day,
-       bassDay$doy,bassDay$L.day.m2-bassDay$se.L.m2.day,code=0, col=basscolt)
 
-points(hemDay$doy, hemDay$L.day.m2, type="b",pch=19, col=hemcol)
+
+points(hemDay$doy, hemDay$L.day.m2, pch=19, col=hemcol)
 arrows(hemDay$doy,hemDay$L.day.m2+hemDay$se.L.m2.day,
-       hemDay$doy,hemDay$L.day.m2-hemDay$se.L.m2.day,code=0, col=hemcolt)
+       hemDay$doy,hemDay$L.day.m2-hemDay$se.L.m2.day,code=0)
+axis(1, xseq, cex.axis=cax )
+axis(2, y3seq,  cex.axis=cax, las=2 )
 
+par(mai=c(0.25,0.25,0.25,0.25))
+
+plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
+     ylab=" ", xlim=c(xl,xh), ylim=c(yl4,yh4))
+
+points(bassDay$doy, bassDay$L.day.m2,pch=19, col=basscol)
+arrows(bassDay$doy,bassDay$L.day.m2+bassDay$se.L.m2.day,
+       bassDay$doy,bassDay$L.day.m2-bassDay$se.L.m2.day,code=0)
+
+
+axis(1, xseq, cex.axis=cax )
+axis(2, y4seq,  cex.axis=cax, las=2 )
 dev.off()
