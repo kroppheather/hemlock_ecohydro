@@ -130,7 +130,7 @@ yl4 <- 0
 yh4 <- 0.02
 
 #axis tick label size
-cax <- 1.5
+cax <- 1.75
 
 # plot lines width
 lw <- 1.5
@@ -140,9 +140,11 @@ llx <- 3
 lly1 <- 6.5
 lly2 <- 4
 # size of labels
-cll <- 1.2
+cll <- 1.3
 # size of legend
-lgc <- 1.1
+lgc <- 1.5
+# size of points
+cpt <- 2
 
 
 
@@ -174,7 +176,7 @@ mtext("Soil moisture", side=2, line=lly1, cex=cll)
 mtext(expression(paste("( m"^3, "m"^-3,")")), side=2, line=lly2, cex=cll)
 mtext("Precipitation", side=4, line=lly2, cex=cll)
 mtext("(mm)", side=4, line=lly1, cex=cll)
-legend(205,0.5, c("soil moisture", "precipitation"), lwd=c(lw,NA),
+legend(200,0.5, c("soil moisture", "precipitation"), lwd=c(lw,NA),
        col=c("black","#C6DAF4"),pch=c(NA,15), cex=lgc, bty="n")
 
 
@@ -193,7 +195,7 @@ mtext("Maximum VPD", side=2, line=lly1, cex=cll)
 mtext("(KPa)", side=2, line=lly2, cex=cll)
 mtext("Air temperature", side=4, line=lly2, cex=cll)
 mtext("(C)", side=4, line=lly1, cex=cll)
-legend(205,0.5, c("soil moisture", "precipitation"), lwd=c(lw,lw),
+legend(200,0.8, c("soil moisture", "precipitation"), lwd=c(lw,lw),
        col=c("black","tomato3"), cex=lgc, bty="n")
 
 
@@ -204,7 +206,7 @@ plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ",
 
 
 
-points(hemDay$doy, hemDay$L.day.m2, pch=19, col=hemcol)
+points(hemDay$doy, hemDay$L.day.m2, pch=19, col=hemcol, cex=cpt)
 arrows(hemDay$doy,hemDay$L.day.m2+hemDay$se.L.m2.day,
        hemDay$doy,hemDay$L.day.m2-hemDay$se.L.m2.day,code=0)
 axis(1, xseq, cex.axis=cax )
@@ -217,7 +219,7 @@ par(mai=c(0.1,0.1,0.1,0.1))
 plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
      ylab=" ", xlim=c(xl,xh), ylim=c(yl4,yh4))
 
-points(bassDay$doy, bassDay$L.day.m2,pch=19, col=basscol)
+points(bassDay$doy, bassDay$L.day.m2,pch=19, col=basscol, cex=cpt)
 arrows(bassDay$doy,bassDay$L.day.m2+bassDay$se.L.m2.day,
        bassDay$doy,bassDay$L.day.m2-bassDay$se.L.m2.day,code=0)
 
