@@ -8,6 +8,9 @@
 library(lubridate)
 library(ggplot2)
 library(dplyr)
+library(rjags)
+library(coda)
+library(mcmcplots)
 
 #### set up directories ----
 dirUser <- 2
@@ -84,3 +87,5 @@ sap_count <- sap_analysis %>%
   group_by(doy,species) %>%
   summarise(ncount = n()) %>%
   filter(ncount >= 6)
+
+# need to set up species ID, and specDay table with weather data
