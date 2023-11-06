@@ -121,7 +121,9 @@ weatherDaily <- weatherHourly %>%
             aveVPD = mean(VPD_hr, na.rm=TRUE),
             maxVPD = max(VPD_hr, na.rm=TRUE),
             max_SW = max(S_Rad, na.rm=TRUE),
-            AirT = mean(Air_temp, na.rm=TRUE))
+            AirT = mean(Air_temp, na.rm=TRUE),
+            maxAirT = max(Air_temp, na.rm=TRUE),
+            minAirT= min(Air_temp, na.rm=TRUE))
   
 
 
