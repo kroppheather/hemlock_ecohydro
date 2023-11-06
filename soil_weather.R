@@ -109,7 +109,8 @@ weatherHourly <- weather %>%
             n_Precip = length(na.omit(Precip)),
             VPD_hr = mean(VPD, na.rm=TRUE),
             S_Rad = mean(SolRad, na.rm=TRUE),
-            Air_temp = mean(AirTemp, na.rm=TRUE))%>%
+            Air_temp = mean(AirTemp, na.rm=TRUE),
+            AtmosPr=  mean(AtmosPr, na.rm=TRUE))%>%
   filter(doy >= 158 & doy <= 251 &  year == 2022)
 
 weatherHourly$DD <- weatherHourly$doy + (weatherHourly$hour/24)

@@ -34,6 +34,7 @@ sensors <- read.csv(paste0(dirData[dirUser],"/sapflow/sensordata_061522.csv"))
 
 
 #### sapwood ----
+
 #hemlock allometry from "Water use by eastern hemlock (Tsuga canadensis) 
 #and black birch (Betula lenta): implications of effects of the hemlock woolly adelgid" by Daley et Al
 #basswood allometry by Ewers et. Al: "Tree species effects on stand transpiration"
@@ -49,8 +50,77 @@ summary(sapdepthHem)
 sensors$sd.cm <- ifelse(sensors$Tree.Type == "Hemlock", #if sensors is hemlock,
                         -0.0133 + (0.1252*sensors$DBH..cm.),
                         -0.7783 + (0.24546*sensors$DBH..cm.))
+sensors$DBH.cm <- sensors$DBH..cm.
+########## Tree allometry ---
 
 
+## sapwood area
+
+# hemlock tree
+# sapwood area measurements are from 
+plot(hemlockmeas$DBH.cm, log(hemlockmeas$SapwoodArea.cm2))
+sapareaHem <- lm(log(hemlockmeas$SapwoodArea.cm2) ~ log(hemlockmeas$DBH.cm))
+abline(sapareaHem)
+summary(sapareaHem)
+
+
+
+
+
+
+hemlock.tree$sap.areacm2 <- exp(-1.192 + (2.010*log(hemlock.tree$DBH..cm.)))
+#convert sap area to m2
+hemlock.tree$sap.aream2 <- 0.0001*hemlock.tree$sap.areacm2
+
+# basswood
+
+#calculate heartwood
+
+basswood.tree$bark <- (basswood.tree$DBH..cm.*0.0326) - 0.1708
+
+basswood.tree$Htwd <- basswood.tree$DBH..cm.  - (basswood.tree$sd.cm*2) - (basswood.tree$bark*2)
+
+
+
+#calculate sapwood area
+
+basswood.tree$sap.areacm2 <- (pi*(((basswood.tree$sd.cm/2)+(basswood.tree$Htwd/2))^2))-(pi*((basswood.tree$Htwd/2)^2))
+basswood.tree$sap.aream2 <-  0.0001*basswood.tree$sap.areacm2
+
+
+#check relationship
+# lm.log<- lm(log(basswoodLA$LA.m2) ~ log(basswoodLA$DBH.cm))
+# summary(lm.log)
+# plot(basswoodLA$DBH.cm, basswoodLA$LA.m2)
+# plot(log(basswoodLA$DBH.cm), log(basswoodLA$LA.m2))
+#regression log(LA (m2)) = -1.058 + 1.828 * log(dbh.cm)
+
+#estimate leaf area in m2
+
+#crown = 1.6961 + 0.4233(DBH)
+
+#basswood leaf area to the best of our ability
+#mean basswood weight = 22.1324289 g/m2
+#1/slw = 0.04518257
+
+# data from supplement in dettman mcfarlane
+blm <- basswoodlm %>%
+  filter(SPECIES =="Tilia americana")
+plot(log(blm$DBH_CM), log(blm$LEAF_DRY_MASS_KG))
+
+b.mod <- lm(log(blm$LEAF_DRY_MASS_KG)~log(blm$DBH_CM))
+summary(b.mod)
+
+basswood.tree$biomass.kg = exp(-4.25 + 1.79*(log(basswood.tree$DBH..cm.)))
+
+
+#conversion from Ewers et al SLA averaged over two years (in m2/kg)
+basswood.tree$LA.m2 <- ((34.8+32.4)/2)*basswood.tree$biomass.kg
+
+#leaf area in m2 for hemlock, from Ford and Vose 2007
+hemlock.tree$LA.m2 <- exp((1.542*log(hemlock.tree$DBH..cm.))-0.274)
+
+# test
 
 #### organize sap flow ----
 
@@ -95,6 +165,22 @@ dtAll <- data.frame(date= rep(tabledt$date, times = 16),
                            tabledt[,16],
                            tabledt[,17],
                            tabledt[,18]))
+
+## remove abnormal sensor measurements that would occur from maintaince or
+## issues around rainfall
+dtAll <- dtAll %>%
+  filter(dT >=4 & dT <= 11)
+
+dtPlot <- dtAll %>%
+  filter(sensor == 5)
+ggplot(dtAll, aes(DD, dT, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()
+
+ggplot(dtPlot, aes(DD, dT))+
+  geom_point()+
+  geom_line()
+
 
 #### sap flow calculations ----
 
@@ -159,15 +245,30 @@ dtCalc$velo <- 0.000119*(dtCalc$K^1.231)
 hemlockT <- dtCalc[dtCalc$Tree.Type == "Hemlock",]
 basswoodT <- dtCalc[dtCalc$Tree.Type == "Basswood",]
 
+ggplot(hemlockT, aes(DD, velo, color=as.factor(sensor)))+
+         geom_point()+
+         geom_line()
+
 # filter anything above the 99 percentile
 hemlockQ <- quantile(hemlockT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
 
-hemlock <- hemlockT[hemlockT$velo<= hemlockQ[100],]
+hemlock <- hemlockT %>%
+  filter(velo <= hemlockQ[100])
 
 basswoodQ <- quantile(basswoodT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
 
 
-basswood <-basswoodT[basswoodT$velo<= basswoodQ[100],]
+basswood <-basswoodT %>%
+  filter(velo <= basswoodQ[100])
+
+ggplot(hemlock, aes(DD, velo, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()
+
+ggplot(basswood, aes(DD, velo, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()
+
 
 
 #### radial correction ----
@@ -270,7 +371,7 @@ sapareaHem <- lm(log(hemlockmeas$SapwoodArea.cm2) ~ log(hemlockmeas$DBH.cm))
 abline(sapareaHem)
 summary(sapareaHem)
 
-hemlock.tree$sap.areacm2 <- exp(-1.192 + 2.010*log(hemlock.tree$DBH..cm.))
+hemlock.tree$sap.areacm2 <- exp(-1.192 + (2.010*log(hemlock.tree$DBH..cm.)))
 #convert sap area to m2
 hemlock.tree$sap.aream2 <- 0.0001*hemlock.tree$sap.areacm2
 
@@ -319,19 +420,21 @@ basswood.tree$biomass.kg = exp(-4.25 + 1.79*(log(basswood.tree$DBH..cm.)))
 #conversion from Ewers et al SLA averaged over two years (in m2/kg)
 basswood.tree$LA.m2 <- ((34.8+32.4)/2)*basswood.tree$biomass.kg
 
-#leaf area in m2 for hemlock, from Kenefic et al
-hemlock.tree$LA.m2 <- 7.5432 + (0.3659*(hemlock.tree$sap.areacm2))
+#leaf area in m2 for hemlock, from Ford and Vose 2007
+hemlock.tree$LA.m2 <- exp((1.542*log(hemlock.tree$DBH..cm.))-0.274)
 
+# test
 
 
 #### Flow calculations   ----
 
-#flow rate according to clearwater
+#El flow rate according to clearwater and Ewers 
 #F(L s-1) =  v(m s-1)* A (m2)
 
 hemlock.tree$Flow.m3.s <- hemlock.tree$velo * hemlock.tree$sap.aream2
 
 basswood.tree$Flow.m3.s <- basswood.tree$velo * basswood.tree$sap.aream2
+
 
 #convert to L per secton
 
@@ -339,20 +442,16 @@ hemlock.tree$Flow.L.s <- hemlock.tree$Flow.m3.s * 1000
 
 basswood.tree$Flow.L.s <- basswood.tree$Flow.m3.s * 1000
 
-#normalize by canopy leaf area
+#normalize by canopy leaf area for El
 hemlock.tree$Flow.L.m2.s <- hemlock.tree$Flow.L.s /hemlock.tree$LA.m2
 
 basswood.tree$Flow.L.m2.s <- basswood.tree$Flow.L.s /basswood.tree$LA.m2
+
 
 #summarize total per day for each tree
 #remove NA
 hemlock.treeNN <- hemlock.tree %>%
   filter(is.na(Flow.L.s)==FALSE)
-#calculate total water use by each tree in a day
-#total liters used in 15 min period
-hemlock.treeNN$L.p <- hemlock.treeNN$Flow.L.s* 60 *15
-#per canopy area
-hemlock.treeNN$L.p.m2  <- hemlock.treeNN$L.p/hemlock.treeNN$LA.m2
 
 hemlock.treeNN$hour1 <- floor(hemlock.treeNN$hour)
 
@@ -360,11 +459,6 @@ hemlock.treeNN$hour1 <- floor(hemlock.treeNN$hour)
 #remove NA
 basswood.treeNN <- basswood.tree %>%
   filter(is.na(Flow.L.s)==FALSE)
-#calculate total water use by each tree in a day
-#total liters used in 15 min period
-basswood.treeNN$L.p <- basswood.treeNN$Flow.L.s* 60 *15
-# per canopy area
-basswood.treeNN$L.p.m2  <- basswood.treeNN$L.p/basswood.treeNN$LA.m2
 
 basswood.treeNN$hour1 <- floor(basswood.treeNN$hour)
 

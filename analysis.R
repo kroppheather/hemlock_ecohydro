@@ -78,7 +78,8 @@ sap_all <- left_join(sap_all, dailyPrecip, by="doy")
 sap_analysis <- sap_all %>%
   filter(dayPrec <= 4) %>% # only take days with trace precip amounts less than or equal to 4 mm
   filter(hour >= 7 & hour <= 18 ) %>%
-  filter(VPD_hr > 0.6)
+  filter(VPD_hr > 0.6)%>%
+  filter(is.na(species) != TRUE)
 
 dailyAllt1 <- left_join(weatherDaily, dailyPrecip[,c(1,3)], by="doy")
 dailyAll <- left_join(dailyAllt1, soilDaily, by=c("doy", "year"))
@@ -114,21 +115,29 @@ Kg.coeff<-function(T){115.8+(.423*T)}
 #convert sapflow should be in kg m-2 s-1 
 # assume coversion of 1 L = 1 Kg of water under conditions so
 # need convert L m-2 hr-1 to s
-Gs.convert1<-function(Kg,El,D,P){((Kg*El)/D)*P}
+Gs.convert<-function(Kg,El,D,P){((Kg*El)/D)*P}
 
-sap_analysis$kg_m2_s <- sap_analysis$T.L.hr.m2 * 60*60
-sap_analysis$Kg <- Kg.coeff(sap_analysis$Air_temp)
-
+sap_model$kg_m2_s <- sap_model$T.L.hr.m2 / (60*60)
+sap_model$Kg <- Kg.coeff(sap_model$Air_temp)
+sap_model$GSc <- Gs.convert(sap_model$Kg,
+                            sap_model$kg_m2_s,
+                            sap_model$VPD_hr,
+                            sap_model$AtmosPr)
 #calculate Gs and convert to cm/s from m/s
-
+sap_model$Gc_cm <- sap_model$GSc*100
 #convert cm/s to mmol m-2 s using the equation from Pearcy et al
-#here the term P/101.3 is consered to be equal to one
 unit.conv<-function(gs,T,P){gs*.446*(273/(T+273))*(P/101.3)}
 
+sap_model$gc_mmol_m2_s <- unit.conv(sap_model$Gc_cm,
+                                    sap_model$Air_temp,
+                                    sap_model$AtmosPr)
 
+sap_model$gc_mmol_m2_s
+ggplot(sap_model, aes(DD, gc_mmol_m2_s, color=species))+
+         geom_point()
 ####### Model run -----
 
 # data
 datalist <- list(Nobs = nrow(sap_analysis),
-                 gs = 
+                 gs = )
                   
