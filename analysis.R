@@ -120,16 +120,16 @@ sap_model$GSc <- Gs.convert(sap_model$Kg,
                             sap_model$VPD_hr)
 #calculate Gs and convert to cm/s from m/s
 sap_model$Gc_cm <- sap_model$GSc*100
-#convert cm/s to mmol m-2 s using the equation from Pearcy et al
-# double check this isn't moles
+#convert from cm/s using the equation from Pearcy et al
+# Pearcy output is in moles so convert to mmols
 unit.conv<-function(gs,T,P){gs*.446*(273/(T+273))*(P/101.3)}
 
 sap_model$gc_mmol_m2_s <- unit.conv(sap_model$Gc_cm,
                                     sap_model$Air_temp,
-                                    sap_model$AtmosPr)
+                                    sap_model$AtmosPr)*1000
 
 sap_model$gc_mmol_m2_s
-ggplot(sap_model, aes(DD, gc_mmol_m2_s*1000, color=species))+
+ggplot(sap_model, aes(DD, gc_mmol_m2_s, color=species))+
          geom_point()
 ####### Model run -----
 
