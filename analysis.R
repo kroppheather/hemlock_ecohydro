@@ -115,14 +115,13 @@ Kg.coeff<-function(T){115.8+(.423*T)}
 #convert sapflow should be in kg m-2 s-1 
 # assume coversion of 1 L = 1 Kg of water under conditions so
 # need convert L m-2 hr-1 to s
-Gs.convert<-function(Kg,El,D,P){((Kg*El)/D)*P}
+Gs.convert<-function(Kg,El,D){((Kg*El)/D)}
 
 sap_model$kg_m2_s <- sap_model$T.L.hr.m2 / (60*60)
 sap_model$Kg <- Kg.coeff(sap_model$Air_temp)
 sap_model$GSc <- Gs.convert(sap_model$Kg,
                             sap_model$kg_m2_s,
-                            sap_model$VPD_hr,
-                            sap_model$AtmosPr)
+                            sap_model$VPD_hr)
 #calculate Gs and convert to cm/s from m/s
 sap_model$Gc_cm <- sap_model$GSc*100
 #convert cm/s to mmol m-2 s using the equation from Pearcy et al

@@ -57,51 +57,42 @@ sensors$DBH.cm <- sensors$DBH..cm.
 ## sapwood area
 
 # hemlock tree
-# sapwood area measurements are from 
+# sapwood area measurements are from Daley et Al 
 plot(hemlockmeas$DBH.cm, log(hemlockmeas$SapwoodArea.cm2))
 sapareaHem <- lm(log(hemlockmeas$SapwoodArea.cm2) ~ log(hemlockmeas$DBH.cm))
 abline(sapareaHem)
 summary(sapareaHem)
 
+# sapwood area calculations
+
+sapcalc <- numeric()
+bark <- numeric()
+Htwd <- numeric()
+# calculations result in cm2
+for(i in 1:nrow(sensors)){
+  if(sensors$Tree.Type[i] == "Basswood"){
+    #calculate heartwood
+    
+    bark <- (sensors$DBH.cm[i]*0.0326) - 0.1708
+    
+    Htwd <- sensors$DBH.cm[i]  - (sensors$sd.cm[i]*2) - (bark*2)
+    
+    #calculate sapwood area
+    
+    sapcalc[i] <- (pi*(((sensors$sd.cm[i]/2)+(Htwd/2))^2))-(pi*((Htwd/2)^2))
+    
+  }else{
+    # regression from Daly table
+    sapcalc[i] <- exp(-1.192 + (2.010*log(sensors$DBH.cm[i])))
+  }
+  
+}
 
 
+#convert sap area from cm2 to m2
+sensors$sap.aream2 <- 0.0001*sapcalc
 
-
-
-hemlock.tree$sap.areacm2 <- exp(-1.192 + (2.010*log(hemlock.tree$DBH..cm.)))
-#convert sap area to m2
-hemlock.tree$sap.aream2 <- 0.0001*hemlock.tree$sap.areacm2
-
-# basswood
-
-#calculate heartwood
-
-basswood.tree$bark <- (basswood.tree$DBH..cm.*0.0326) - 0.1708
-
-basswood.tree$Htwd <- basswood.tree$DBH..cm.  - (basswood.tree$sd.cm*2) - (basswood.tree$bark*2)
-
-
-
-#calculate sapwood area
-
-basswood.tree$sap.areacm2 <- (pi*(((basswood.tree$sd.cm/2)+(basswood.tree$Htwd/2))^2))-(pi*((basswood.tree$Htwd/2)^2))
-basswood.tree$sap.aream2 <-  0.0001*basswood.tree$sap.areacm2
-
-
-#check relationship
-# lm.log<- lm(log(basswoodLA$LA.m2) ~ log(basswoodLA$DBH.cm))
-# summary(lm.log)
-# plot(basswoodLA$DBH.cm, basswoodLA$LA.m2)
-# plot(log(basswoodLA$DBH.cm), log(basswoodLA$LA.m2))
-#regression log(LA (m2)) = -1.058 + 1.828 * log(dbh.cm)
-
-#estimate leaf area in m2
-
-#crown = 1.6961 + 0.4233(DBH)
-
-#basswood leaf area to the best of our ability
-#mean basswood weight = 22.1324289 g/m2
-#1/slw = 0.04518257
+### projected leaf area
 
 # data from supplement in dettman mcfarlane
 blm <- basswoodlm %>%
@@ -111,16 +102,24 @@ plot(log(blm$DBH_CM), log(blm$LEAF_DRY_MASS_KG))
 b.mod <- lm(log(blm$LEAF_DRY_MASS_KG)~log(blm$DBH_CM))
 summary(b.mod)
 
-basswood.tree$biomass.kg = exp(-4.25 + 1.79*(log(basswood.tree$DBH..cm.)))
+biomass.kg <- numeric()
+LA.m2 <- numeric()
+
+# calculations result in m2
+for(i in 1:nrow(sensors)){
+  if(sensors$Tree.Type[i] == "Basswood"){
+
+  biomass.kg = exp(-4.25 + 1.79*(log(sensors$DBH.cm[i])))
 
 
-#conversion from Ewers et al SLA averaged over two years (in m2/kg)
-basswood.tree$LA.m2 <- ((34.8+32.4)/2)*basswood.tree$biomass.kg
-
-#leaf area in m2 for hemlock, from Ford and Vose 2007
-hemlock.tree$LA.m2 <- exp((1.542*log(hemlock.tree$DBH..cm.))-0.274)
-
-# test
+  #conversion from Ewers et al SLA averaged over two years (in m2/kg)
+  LA.m2[i] <- ((34.8+32.4)/2)*biomass.kg
+  }else{
+  #leaf area in m2 for hemlock, from Ford and Vose 2007
+  LA.m2[i] <- exp((1.542*log(sensors$DBH.cm[i]))-0.274)
+  }
+}
+sensors$LA.m2 <- LA.m2
 
 #### organize sap flow ----
 
@@ -222,7 +221,6 @@ dtCalc <- left_join(dtCalct1 , sensors, by=c("sensor"="Sensor.Number"))
 
 #sap velocity m s-1 (v)
 #v = 0.000119*k^1.231
-#flow is F (L s-1) = v* A (m2, sapwood area)
 
 #K= (dTmax - dT)/dT if sensor is fully within sapwood
 
@@ -235,11 +233,14 @@ dtCalc$a <- ifelse(dtCalc$sd.cm >= 3,1,
                    dtCalc$sd.cm/3)
 
 dtCalc$b <- 1 - dtCalc$a
-
+# velo is refered to  as Js in Ewers it is m3 of water per m-2 of sap flow per s
+# this can reduce in dimension to m per s
 dtCalc$dTCor <- (dtCalc$dT - (dtCalc$b * dtCalc$maxDT))/dtCalc$a
 dtCalc$K <- (dtCalc$maxDT - dtCalc$dTCor)/dtCalc$dTCor
 dtCalc$velo <- 0.000119*(dtCalc$K^1.231)
 
+ggplot(dtCalc, aes(DD, velo, color=Tree.Type))+
+  geom_point()
 
 #separate types
 hemlockT <- dtCalc[dtCalc$Tree.Type == "Hemlock",]
@@ -249,17 +250,17 @@ ggplot(hemlockT, aes(DD, velo, color=as.factor(sensor)))+
          geom_point()+
          geom_line()
 
-# filter anything above the 99 percentile
+# filter anything above the 98 percentile
 hemlockQ <- quantile(hemlockT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
 
 hemlock <- hemlockT %>%
-  filter(velo <= hemlockQ[100])
+  filter(velo <= hemlockQ[99])
 
 basswoodQ <- quantile(basswoodT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
 
 
 basswood <-basswoodT %>%
-  filter(velo <= basswoodQ[100])
+  filter(velo <= basswoodQ[99])
 
 ggplot(hemlock, aes(DD, velo, color=as.factor(sensor)))+
   geom_point()+
@@ -356,174 +357,93 @@ basswood.tree <- basswood %>%
 
 # running radial correction
 hemlock.cor <- coefficients(azim.rel)
-hemlock.tree$velo.cor <- (hemlock.tree$velo*0.5)+(((hemlock.tree$velo*hemlock.cor[2])+hemlock.cor[1])*0.5)
+hemlock.tree$velo.cor <- (hemlock.tree$velo*0.5)+(((hemlock.tree$velo*hemlock.cor[2])+0)*0.5)
 
 basswood.cor <- coefficients(azimB.rel)
-basswood.tree$velo.cor <- (basswood.tree$velo*0.5)+(((basswood.tree$velo*basswood.cor[2])+basswood.cor[1])*0.5)
+basswood.tree$velo.cor <- (basswood.tree$velo*0.5)+(((basswood.tree$velo*basswood.cor[2])+0)*0.5)
 
-#### Canopy calculations   ----
+## bind trees back together
 
-## sapwood area
-
-# hemlock tree
-plot(log(hemlockmeas$DBH.cm), log(hemlockmeas$SapwoodArea.cm2))
-sapareaHem <- lm(log(hemlockmeas$SapwoodArea.cm2) ~ log(hemlockmeas$DBH.cm))
-abline(sapareaHem)
-summary(sapareaHem)
-
-hemlock.tree$sap.areacm2 <- exp(-1.192 + (2.010*log(hemlock.tree$DBH..cm.)))
-#convert sap area to m2
-hemlock.tree$sap.aream2 <- 0.0001*hemlock.tree$sap.areacm2
-
-# basswood
-
-#calculate heartwood
-
-basswood.tree$bark <- (basswood.tree$DBH..cm.*0.0326) - 0.1708
-
-basswood.tree$Htwd <- basswood.tree$DBH..cm.  - (basswood.tree$sd.cm*2) - (basswood.tree$bark*2)
+sapFlow <- rbind(hemlock.tree, basswood.tree)
 
 
 
-#calculate sapwood area
 
-basswood.tree$sap.areacm2 <- (pi*(((basswood.tree$sd.cm/2)+(basswood.tree$Htwd/2))^2))-(pi*((basswood.tree$Htwd/2)^2))
-basswood.tree$sap.aream2 <-  0.0001*basswood.tree$sap.areacm2
+#### El calculations   ----
+# for comparison of flow and E  from Ewers
+# Ewers equation looks for Js (velo) in Kg m-2 s-1
+# 1 m3 is 1000 kg
+sapFlow$Js <- sapFlow$velo.cor * 1000
 
-
-#check relationship
-# lm.log<- lm(log(basswoodLA$LA.m2) ~ log(basswoodLA$DBH.cm))
-# summary(lm.log)
-# plot(basswoodLA$DBH.cm, basswoodLA$LA.m2)
-# plot(log(basswoodLA$DBH.cm), log(basswoodLA$LA.m2))
-#regression log(LA (m2)) = -1.058 + 1.828 * log(dbh.cm)
-
-#estimate leaf area in m2
-
-#crown = 1.6961 + 0.4233(DBH)
-
-#basswood leaf area to the best of our ability
-#mean basswood weight = 22.1324289 g/m2
-#1/slw = 0.04518257
-
-# data from supplement in dettman mcfarlane
-blm <- basswoodlm %>%
-      filter(SPECIES =="Tilia americana")
-plot(log(blm$DBH_CM), log(blm$LEAF_DRY_MASS_KG))
-
-b.mod <- lm(log(blm$LEAF_DRY_MASS_KG)~log(blm$DBH_CM))
-summary(b.mod)
-
-basswood.tree$biomass.kg = exp(-4.25 + 1.79*(log(basswood.tree$DBH..cm.)))
+ggplot(sapFlow, aes(DD,Js, color=Tree.Type))+
+  geom_point()
 
 
-#conversion from Ewers et al SLA averaged over two years (in m2/kg)
-basswood.tree$LA.m2 <- ((34.8+32.4)/2)*basswood.tree$biomass.kg
-
-#leaf area in m2 for hemlock, from Ford and Vose 2007
-hemlock.tree$LA.m2 <- exp((1.542*log(hemlock.tree$DBH..cm.))-0.274)
-
-# test
+#Calculate El
+# El = Js * Sa/Sl
+# Kg m-2 leaf s-1 (also = L m-2 leaf s-1)
 
 
-#### Flow calculations   ----
+sapFlow$El <- sapFlow$Js *(sapFlow$sap.aream2/sapFlow$LA.m2)
 
-#El flow rate according to clearwater and Ewers 
-#F(L s-1) =  v(m s-1)* A (m2)
+# sap flow per hour
+sapFlow$El.hr <- sapFlow$El*60*60
 
-hemlock.tree$Flow.m3.s <- hemlock.tree$velo * hemlock.tree$sap.aream2
+sapFlow$hour1 <- floor(sapFlow$hour)
 
-basswood.tree$Flow.m3.s <- basswood.tree$velo * basswood.tree$sap.aream2
+sapFlowNN <- sapFlow %>%
+  filter(is.na(El) == FALSE)
 
-
-#convert to L per secton
-
-hemlock.tree$Flow.L.s <- hemlock.tree$Flow.m3.s * 1000
-
-basswood.tree$Flow.L.s <- basswood.tree$Flow.m3.s * 1000
-
-#normalize by canopy leaf area for El
-hemlock.tree$Flow.L.m2.s <- hemlock.tree$Flow.L.s /hemlock.tree$LA.m2
-
-basswood.tree$Flow.L.m2.s <- basswood.tree$Flow.L.s /basswood.tree$LA.m2
-
-
-#summarize total per day for each tree
-#remove NA
-hemlock.treeNN <- hemlock.tree %>%
-  filter(is.na(Flow.L.s)==FALSE)
-
-hemlock.treeNN$hour1 <- floor(hemlock.treeNN$hour)
-
-#summarize total per day for each tree
-#remove NA
-basswood.treeNN <- basswood.tree %>%
-  filter(is.na(Flow.L.s)==FALSE)
-
-basswood.treeNN$hour1 <- floor(basswood.treeNN$hour)
+sapFlowNN$species <- tolower(sapFlowNN$Tree.Type)
 
 ##############################
 #### Summary tables    ----
+# hourly table
 
-
-# calculate average hourly T
-hemlock.tree.L.hour <- hemlock.treeNN %>%
-  group_by(Tree.Number, doy, hour1) %>%
-  summarise(L.hr = mean(Flow.L.s*60*60, na.rm=TRUE),
-            sd.L.hr = sd(Flow.L.s*60*60, na.rm=TRUE),
-            n = length(na.omit(Flow.L.s)),
-            L.hr.m2 = mean(Flow.L.m2.s*60*60, na.rm=TRUE),
-            sd.L.hr.m2 = sd(Flow.L.m2.s*60*60, na.rm=TRUE),
-            n.m2 = length(na.omit(Flow.L.m2.s))) %>%
-  filter(n>=3)
-hemlock.tree.L.hour$species <- rep("hemlock",nrow(hemlock.tree.L.hour))
-
-basswood.tree.L.hour <- basswood.treeNN %>%
-  group_by(Tree.Number, doy, hour1) %>%
-  summarise(L.hr = mean(Flow.L.s*60*60, na.rm=TRUE),
-            sd.L.hr = sd(Flow.L.s*60*60, na.rm=TRUE),
-            n = length(na.omit(Flow.L.s)),
-            L.hr.m2 = mean(Flow.L.m2.s*60*60, na.rm=TRUE),
-            L.hr.m2 = sd(Flow.L.m2.s*60*60, na.rm=TRUE),
-            n.m2 = length(na.omit(Flow.L.m2.s))) %>%
-  filter(n>=3) # at least 3 obs present for a tree in a hour
-
-basswood.tree.L.hour$species <- rep("basswood",nrow(basswood.tree.L.hour))
-
-# combine tables
-tree.L.hour <- rbind(hemlock.tree.L.hour, basswood.tree.L.hour)
-
+tree.hour <- sapFlowNN %>%
+  group_by(species, Tree.Number, doy, hour1) %>%
+  summarise(Jst = mean(Js, na.rm=TRUE), # in kg
+            sd.Jst = sd(Js, na.rm=TRUE),
+            Elt = mean(El, na.rm=TRUE),
+            sd.Elt = sd(El, na.rm=TRUE),
+            El.hrtt = mean(El.hr, na.rm=TRUE),
+            sd.Elhr = sd(El.hr, na.rm=TRUE),
+            n_t= length(na.omit(Js)))
+  
+ggplot(tree.hour, aes(doy+(hour1/24),El.hrtt, color=as.factor(Tree.Number)))+
+  geom_line()
 
 # hourly averages across trees
-sapflow.hour <- tree.L.hour %>%
+sapflow.hour <- tree.hour %>%
   group_by(doy, hour1, species) %>%
-  summarise(T.L.hr = mean(L.hr, na.rm=TRUE),
-            T.sd.L.hr = sd(L.hr, na.rm=TRUE),
-            T.n = length(na.omit(L.hr)),
-            T.L.hr.m2 = mean(L.hr.m2, na.rm=TRUE),
-            T.sd.L.hr.m2 = sd(L.hr.m2, na.rm=TRUE),
-            T.n.m2 = length(na.omit(L.hr.m2))) %>%
-  filter(T.n >= 3)
+  summarise(Js = mean(Jst, na.rm=TRUE),
+            sd_Js = sd(Jst, na.rm=TRUE),
+            n = length(na.omit(Jst)),
+            El = mean(Elt, na.rm=TRUE),
+            sd_El = sd(Elt, na.rm=TRUE),
+            El_hr = mean(El.hrtt, na.rm=TRUE),
+            sd_Elhr = sd(El.hrtt, na.rm=TRUE)) %>%
+  filter(n >= 3)
 
 
 # daily totals
 
 
-Tot.tree.L.day <- tree.L.hour %>%
+Tot.tree.L.day <- tree.hour %>%
   group_by(Tree.Number, doy, species) %>%
-  summarise(Tot.L.day = sum(L.hr, na.rm=TRUE),
-            Tot.n.day = length(na.omit(L.hr)),
-            Tot.L.day.m2 = sum(L.hr.m2, na.rm=TRUE)) %>%
-  filter(Tot.n.day >=22)
+  summarise(Tot_El_day = sum(El.hrtt, na.rm=TRUE),
+            Tot_n_day = length(na.omit(El.hrtt))) %>%
+  filter(Tot_n_day >=22)
 
 T.L.day <- Tot.tree.L.day %>%
   group_by( doy, species) %>%
-  summarise(L.day = mean(Tot.L.day), # per tree
-            sd.Lday = sd(Tot.L.day),
-            n.plant = length(na.omit(Tot.n.day)),
-            L.day.m2 = mean(Tot.L.day.m2), # per m2 of leaf area
-            sd.day.m2 = sd(Tot.L.day.m2)) %>% 
-  filter(n.plant >= 3)
+  summarise(El_day = mean(Tot_El_day), # per tree
+            sd_El = sd(Tot_El_day),
+            n_plant = length(na.omit(Tot_El_day))) %>% 
+  filter(n_plant >= 3)
+
+ggplot(T.L.day, aes(doy, El_day, color=species))+
+  geom_point()
 
 
 rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript")))
