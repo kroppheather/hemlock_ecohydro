@@ -21,13 +21,7 @@ dirScriptAll <- c("/Users/hkropp/Documents/GitHub/hemlock_ecohydro",
 dirScript <- dirScriptAll[2]
 
 #### sapflow data ----
-## T.L.day: average daily transpiration by species in 
-## liters per day per tree and per m2 of leaf area
-## sapflow.hour: average hourly sap flow by species in
-## L per hour per tree and per m2 of leaf area
-## liters per day per tree and per m2 of leaf area
-## Tot.tree.L.day: average daily transpiration by tree in
-## liters per day per tree and per m2 of leaf area
+
 
 source(paste0(dirScript, "/sapflux.r"))
 
@@ -36,6 +30,10 @@ source(paste0(dirScript, "/sapflux.r"))
 # weatherDaily and weatherHourly have hourly and daily stats
 
 source(paste0(dirScript, "/soil_weather.r"))
+
+#### calculate gc ---
+
+
 
 #### explore basic data patterns  ----
 # daily data
@@ -107,24 +105,23 @@ specDay$specID <- ifelse(specDay$species == "hemlock", 1,
 
 # calculate canopy conductance from sap flow
 # from Ewers and Oren 2000
-#Gs=Kg*El/D from Ewers and Oren 2000
+#Gs=Kg*El/D from Ewers and Oren 2000 in m/s
 #function for conductance coefficient (kPa m3 kg-1)
 
 Kg.coeff<-function(T){115.8+(.423*T)}
 
-#convert sapflow should be in kg m-2 s-1 
-# assume coversion of 1 L = 1 Kg of water under conditions so
-# need convert L m-2 hr-1 to s
+#convert El should be in kg m-2 s-1 
+
 Gs.convert<-function(Kg,El,D){((Kg*El)/D)}
 
-sap_model$kg_m2_s <- sap_model$T.L.hr.m2 / (60*60)
 sap_model$Kg <- Kg.coeff(sap_model$Air_temp)
 sap_model$GSc <- Gs.convert(sap_model$Kg,
-                            sap_model$kg_m2_s,
+                            sap_model$El,
                             sap_model$VPD_hr)
 #calculate Gs and convert to cm/s from m/s
 sap_model$Gc_cm <- sap_model$GSc*100
 #convert cm/s to mmol m-2 s using the equation from Pearcy et al
+# double check this isn't moles
 unit.conv<-function(gs,T,P){gs*.446*(273/(T+273))*(P/101.3)}
 
 sap_model$gc_mmol_m2_s <- unit.conv(sap_model$Gc_cm,
@@ -132,7 +129,7 @@ sap_model$gc_mmol_m2_s <- unit.conv(sap_model$Gc_cm,
                                     sap_model$AtmosPr)
 
 sap_model$gc_mmol_m2_s
-ggplot(sap_model, aes(DD, gc_mmol_m2_s, color=species))+
+ggplot(sap_model, aes(DD, gc_mmol_m2_s*1000, color=species))+
          geom_point()
 ####### Model run -----
 
