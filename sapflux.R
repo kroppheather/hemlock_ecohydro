@@ -72,7 +72,7 @@ Htwd <- numeric()
 for(i in 1:nrow(sensors)){
   if(sensors$Tree.Type[i] == "Basswood"){
     #calculate heartwood
-    
+    #Hengst and dawson 1993
     bark <- (sensors$DBH.cm[i]*0.0326) - 0.1708
     
     Htwd <- sensors$DBH.cm[i]  - (sensors$sd.cm[i]*2) - (bark*2)
