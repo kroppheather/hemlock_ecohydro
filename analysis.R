@@ -131,6 +131,8 @@ sap_model$gc_mmol_m2_s <- unit.conv(sap_model$Gc_cm,
 sap_model$gc_mmol_m2_s
 ggplot(sap_model, aes(DD, gc_mmol_m2_s, color=species))+
          geom_point()
+ggplot(sap_model, aes(DD, Gc_cm*10, color=species))+
+  geom_point()
 ####### Model run -----
 
 # data

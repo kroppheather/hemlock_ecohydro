@@ -362,11 +362,13 @@ hemlock.tree$velo.cor <- (hemlock.tree$velo*0.5)+(((hemlock.tree$velo*hemlock.co
 basswood.cor <- coefficients(azimB.rel)
 basswood.tree$velo.cor <- (basswood.tree$velo*0.5)+(((basswood.tree$velo*basswood.cor[2])+0)*0.5)
 
+
 ## bind trees back together
 
 sapFlow <- rbind(hemlock.tree, basswood.tree)
 
-
+ggplot(sapFlow, aes(DD, velo.cor, color=as.factor(Tree.Number)))+
+  geom_point()
 
 
 #### El calculations   ----
@@ -374,8 +376,8 @@ sapFlow <- rbind(hemlock.tree, basswood.tree)
 # Ewers equation looks for Js (velo) in Kg m-2 s-1
 # 1 m3 is 1000 kg
 sapFlow$Js <- sapFlow$velo.cor * 1000
-
-ggplot(sapFlow, aes(DD,Js, color=Tree.Type))+
+# look at Js in grams
+ggplot(sapFlow, aes(DD,Js*1000, color=Tree.Type))+
   geom_point()
 
 
