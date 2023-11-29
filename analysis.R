@@ -102,7 +102,7 @@ specDay <- left_join(specDayt, dailyAll, by="doy")
 specDay$specID <- ifelse(specDay$species == "hemlock", 1,
                   ifelse(specDay$species == "basswood",2,NA))
 
-
+specDay$specDayID <- seq(1,nrow(specDay))
 # calculate canopy conductance from sap flow
 # from Ewers and Oren 2000
 #Gs=Kg*El/D from Ewers and Oren 2000 in m/s
@@ -133,6 +133,8 @@ ggplot(sap_model, aes(DD, gc_mmol_m2_s, color=species))+
          geom_point()
 ggplot(sap_model, aes(DD, Gc_cm*10, color=species))+
   geom_point()
+
+
 ####### Model run -----
 
 # data
