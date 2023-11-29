@@ -61,9 +61,7 @@ sensors$DBH.cm <- sensors$DBH..cm.
 plot(hemlockmeas$DBH.cm, log(hemlockmeas$SapwoodArea.cm2))
 sapareaHem <- lm(log(hemlockmeas$SapwoodArea.cm2) ~ log(hemlockmeas$DBH.cm))
 abline(sapareaHem)
-summary(sapareaHem)
-
-# sapwood area calculations
+summary(sapareaHem)# sapwood area calculations
 
 sapcalc <- numeric()
 bark <- numeric()
@@ -376,8 +374,11 @@ ggplot(sapFlow, aes(DD, velo.cor, color=as.factor(Tree.Number)))+
 # Ewers equation looks for Js (velo) in Kg m-2 s-1
 # 1 m3 is 1000 kg
 sapFlow$Js <- sapFlow$velo.cor * 1000
-# look at Js in grams
+# look at Js in grams per m2 per s
 ggplot(sapFlow, aes(DD,Js*1000, color=Tree.Type))+
+  geom_point()
+# look at Js in grams per cm2 per day
+ggplot(sapFlow, aes(DD,Js*1000*0.0001*60*60*24, color=Tree.Type))+
   geom_point()
 
 
@@ -387,6 +388,12 @@ ggplot(sapFlow, aes(DD,Js*1000, color=Tree.Type))+
 
 
 sapFlow$El <- sapFlow$Js *(sapFlow$sap.aream2/sapFlow$LA.m2)
+
+
+# look at Ec in mm
+sapFlow$Ec <- (((sapFlow$Js/1000) *(sapFlow$sap.aream2/sapFlow$LA.m2))*1000)*60*60*24
+ggplot(sapFlow, aes(DD,Ec, color=Tree.Type))+
+  geom_point()
 
 # sap flow per hour
 sapFlow$El.hr <- sapFlow$El*60*60
