@@ -71,6 +71,7 @@ dailyPrecip$weekPr <- weeklyPrecip
 
 sap_all <- left_join(sap_all, dailyPrecip, by="doy")
 
+
 # canopy conductance from sap flow is most reliable 
 # during the day and when VPD is greater than 0.6 according to Ewers and Oren
 sap_analysis <- sap_all %>%
@@ -92,6 +93,39 @@ sap_count <- sap_analysis %>%
 
 sap_model <- inner_join(sap_analysis, sap_count, by=c("doy","species"))
 
+ggplot(sap_model, aes(DD, El, color=species))+
+  geom_point()+
+  geom_line()
+
+ggplot(sap_model%>%filter(doy>183 & doy<=190), aes(DD, El, color=species))+
+  geom_point()+
+  geom_line()
+
+
+ggplot(sap_model%>%filter(doy>210 & doy<=225), aes(DD, El, color=species))+
+  geom_point()+
+  geom_line()
+
+ggplot(sap_model%>%filter(doy>225 & doy<=235), aes(DD, El, color=species))+
+  geom_point()+
+  geom_line()
+
+ggplot(sap_model%>%filter(doy>235 & doy<=245), aes(DD, El, color=species))+
+  geom_point()+
+  geom_line()
+
+
+ggplot(sap_model%>%filter(doy>245 & doy<=255), aes(DD, El, color=species))+
+  geom_point()+
+  geom_line()
+
+ggplot(sap_model%>%filter(doy>210 & doy<=225), aes(DD, VPD_hr))+
+  geom_point()+
+  geom_line()
+
+                                                   
+ggplot(sap_model%>%filter(doy==189), aes(VPD_hr, El, color=species))+
+  geom_point()
 
 # need to set up species ID, and specDay table with weather data
 
@@ -103,6 +137,8 @@ specDay$specID <- ifelse(specDay$species == "hemlock", 1,
                   ifelse(specDay$species == "basswood",2,NA))
 
 specDay$specDayID <- seq(1,nrow(specDay))
+
+
 # calculate canopy conductance from sap flow
 # from Ewers and Oren 2000
 #Gs=Kg*El/D from Ewers and Oren 2000 in m/s

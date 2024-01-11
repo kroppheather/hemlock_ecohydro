@@ -163,8 +163,16 @@ dtAll <- data.frame(date= rep(tabledt$date, times = 16),
                            tabledt[,17],
                            tabledt[,18]))
 
+ggplot(dtAll, aes(DD, dT, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()
+
 ## remove abnormal sensor measurements that would occur from maintaince or
 ## issues around rainfall
+
+
+quantile(dtAll$dT,probs=seq(0,1,by=0.01), na.rm=TRUE)
+# quantile filter: removes 1% outliers
 dtAll <- dtAll %>%
   filter(dT >=4 & dT <= 11)
 
@@ -368,6 +376,8 @@ sapFlow <- rbind(hemlock.tree, basswood.tree)
 ggplot(sapFlow, aes(DD, velo.cor, color=as.factor(Tree.Number)))+
   geom_point()
 
+ggplot(sapFlow %>% filter(Tree.Number == 6), aes(DD, velo.cor,))+
+  geom_point()
 
 #### El calculations   ----
 # for comparison of flow and E  from Ewers
@@ -390,9 +400,11 @@ ggplot(sapFlow, aes(DD,Js*1000*0.0001*60*60*24, color=Tree.Type))+
 sapFlow$El <- sapFlow$Js *(sapFlow$sap.aream2/sapFlow$LA.m2)
 
 
-# look at Ec in mm
-sapFlow$Ec <- (((sapFlow$Js/1000) *(sapFlow$sap.aream2/sapFlow$LA.m2))*1000)*60*60*24
-ggplot(sapFlow, aes(DD,Ec, color=Tree.Type))+
+# look at El_mm in mm
+sapFlow$El_mm <- (((sapFlow$Js/1000) *(sapFlow$sap.aream2/sapFlow$LA.m2))*1000)*60*60*24
+ggplot(sapFlow, aes(DD,El_mm, color=Tree.Type))+
+  geom_point()
+ggplot(sapFlow, aes(DD,El, color=Tree.Type))+
   geom_point()
 
 # sap flow per hour
