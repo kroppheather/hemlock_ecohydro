@@ -51,7 +51,7 @@ for(i in 7:nrow(dailyPrecip)){
 dailyPrecip$weekPr <- weeklyPrecip
 
 
-sap_all <- left_join(sap_all, dailyPrecip, by="doy")
+T_L_day <- left_join(Tc.L.day, dailyPrecip, by="doy")
 
 
 # canopy conductance from sap flow is most reliable 
