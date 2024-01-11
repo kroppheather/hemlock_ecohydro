@@ -8,9 +8,7 @@
 library(lubridate)
 library(ggplot2)
 library(dplyr)
-library(rjags)
-library(coda)
-library(mcmcplots)
+
 
 #### set up directories ----
 dirUser <- 2
@@ -31,11 +29,12 @@ source(paste0(dirScript, "/sapflux.r"))
 
 source(paste0(dirScript, "/soil_weather.r"))
 
-#### calculate gc ---
-
-
 
 #### explore basic data patterns  ----
+TreeInfo <- unique(data.frame(species=sensors$Tree.Type,
+                  DBH = sensors$DBH..cm., 
+                  LA.m2 = sensors$LA.m2))
+
 # daily data
 T.L.dayW <- left_join(weatherDaily, T.L.day, by=c("doy"))
 Tc.L.day <- left_join(T.L.dayW , soilDaily, by="doy")
@@ -50,112 +49,52 @@ for(i in 7:nrow(dailyPrecip)){
 
 dailyPrecip$weekPr <- weeklyPrecip
 
+corTest <- na.omit(left_join(soilDaily,dailyPrecip, by="doy"))
+
+plot(corTest$SWC, corTest$weekPr)
+cor(corTest$SWC, corTest$weekPr)
+
 
 T_L_day <- left_join(Tc.L.day, dailyPrecip, by="doy")
-
-
-# canopy conductance from sap flow is most reliable 
-# during the day and when VPD is greater than 0.6 according to Ewers and Oren
-sap_analysis <- sap_all %>%
-  filter(dayPrec <= 4) %>% # only take days with trace precip amounts less than or equal to 4 mm
-  filter(hour >= 7 & hour <= 18 ) %>%
-  filter(VPD_hr > 0.6)%>%
-  filter(is.na(species) != TRUE)
-
-dailyAllt1 <- left_join(weatherDaily, dailyPrecip[,c(1,3)], by="doy")
-dailyAll <- left_join(dailyAllt1, soilDaily, by=c("doy", "year"))
-
-# get the number of observations in a day
-
-sap_count <- sap_analysis %>%
-  filter(is.na(species ) == FALSE) %>%
-  group_by(doy,species) %>%
-  summarise(ncount = n()) %>%
-  filter(ncount >= 6)
-
-sap_model <- inner_join(sap_analysis, sap_count, by=c("doy","species"))
-
-ggplot(sap_model, aes(DD, El, color=species))+
-  geom_point()+
-  geom_line()
-
-ggplot(sap_model%>%filter(doy>183 & doy<=190), aes(DD, El, color=species))+
-  geom_point()+
+# note that L per day works out to mm/day 
+ggplot(T_L_day, aes(doy, El_day, color=species))+
+         geom_point()+
   geom_line()
 
 
-ggplot(sap_model%>%filter(doy>210 & doy<=225), aes(DD, El, color=species))+
-  geom_point()+
-  geom_line()
-
-ggplot(sap_model%>%filter(doy>225 & doy<=235), aes(DD, El, color=species))+
-  geom_point()+
-  geom_line()
-
-ggplot(sap_model%>%filter(doy>235 & doy<=245), aes(DD, El, color=species))+
-  geom_point()+
-  geom_line()
-
-
-ggplot(sap_model%>%filter(doy>245 & doy<=255), aes(DD, El, color=species))+
-  geom_point()+
-  geom_line()
-
-ggplot(sap_model%>%filter(doy>210 & doy<=225), aes(DD, VPD_hr))+
-  geom_point()+
-  geom_line()
-
-                                                   
-ggplot(sap_model%>%filter(doy==189), aes(VPD_hr, El, color=species))+
+ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
   geom_point()
 
-# need to set up species ID, and specDay table with weather data
+ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
+  geom_point()
 
+ggplot(T_L_day, aes(maxVPD, El_day, color=species))+
+  geom_point()
 
-specDayt <- data.frame(doy=sap_count$doy,
-                             species=sap_count$species)
-specDay <- left_join(specDayt, dailyAll, by="doy")
-specDay$specID <- ifelse(specDay$species == "hemlock", 1,
-                  ifelse(specDay$species == "basswood",2,NA))
+ggplot(T_L_day, aes(weekPr, El_day, color=species))+
+  geom_point()
 
-specDay$specDayID <- seq(1,nrow(specDay))
+ggplot(T_L_day%>%filter(species == "basswood"), aes(log(weekPr), El_day))+
+  geom_point()
 
+ggplot(T_L_day%>%filter(species == "hemlock"), aes(log(weekPr), El_day))+
+  geom_point()
 
-# calculate canopy conductance from sap flow
-# from Ewers and Oren 2000
-#Gs=Kg*El/D from Ewers and Oren 2000 in m/s
-#function for conductance coefficient (kPa m3 kg-1)
+ggplot(T_L_day, aes(SWC, weekPr))+
+  geom_point()
 
-Kg.coeff<-function(T){115.8+(.423*T)}
+ggplot(T_L_day, aes(log(SWC), El_day, color=species))+
+  geom_point()
 
-#convert El should be in kg m-2 s-1 
-
-Gs.convert<-function(Kg,El,D){((Kg*El)/D)}
-
-sap_model$Kg <- Kg.coeff(sap_model$Air_temp)
-sap_model$GSc <- Gs.convert(sap_model$Kg,
-                            sap_model$El,
-                            sap_model$VPD_hr)
-#calculate Gs and convert to cm/s from m/s
-sap_model$Gc_cm <- sap_model$GSc*100
-#convert from cm/s using the equation from Pearcy et al
-# Pearcy output is in moles so convert to mmols
-unit.conv<-function(gs,T,P){gs*.446*(273/(T+273))*(P/101.3)}
-
-sap_model$gc_mmol_m2_s <- unit.conv(sap_model$Gc_cm,
-                                    sap_model$Air_temp,
-                                    sap_model$AtmosPr)*1000
-
-sap_model$gc_mmol_m2_s
-ggplot(sap_model, aes(DD, gc_mmol_m2_s, color=species))+
-         geom_point()
-ggplot(sap_model, aes(DD, Gc_cm*10, color=species))+
+ggplot(T_L_day%>%filter(species == "hemlock"), aes(log(SWC), El_day))+
   geom_point()
 
 
-####### Model run -----
+ggplot(T_L_day%>%filter(species == "basswood"), aes(log(SWC), El_day))+
+  geom_point()
 
-# data
-datalist <- list(Nobs = nrow(sap_analysis),
-                 gs = )
-                  
+ggplot(T_L_day, aes(s_temp, El_day, color=species))+
+  geom_point()
+
+ggplot(T_L_day, aes(doy, El_day, color=species))+
+  geom_point()

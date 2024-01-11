@@ -182,7 +182,8 @@ ggplot(dtAll, aes(DD, dT, color=as.factor(sensor)))+
   geom_point()+
   geom_line()
 
-ggplot(dtPlot, aes(DD, dT))+
+ggplot( dtAll %>%
+          filter(sensor == 12), aes(DD, dT))+
   geom_point()+
   geom_line()
 
@@ -243,9 +244,13 @@ dtCalc$b <- 1 - dtCalc$a
 # this can reduce in dimension to m per s
 dtCalc$dTCor <- (dtCalc$dT - (dtCalc$b * dtCalc$maxDT))/dtCalc$a
 dtCalc$K <- (dtCalc$maxDT - dtCalc$dTCor)/dtCalc$dTCor
+ggplot(dtCalc %>% filter(sensor == 15), aes(DD, K))+
+  geom_point()
+
+
 dtCalc$velo <- 0.000119*(dtCalc$K^1.231)
 
-ggplot(dtCalc, aes(DD, velo, color=Tree.Type))+
+ggplot(dtCalc%>% filter(sensor == 13), aes(DD, velo, color=Tree.Type))+
   geom_point()
 
 #separate types
@@ -466,6 +471,6 @@ ggplot(T.L.day, aes(doy, El_day, color=species))+
   geom_point()
 
 
-rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript", "tree.hour")))
+rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript", "tree.hour", "sensors")))
 
    

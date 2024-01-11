@@ -30,6 +30,12 @@ weather$dateF <- mdy_hms(weather$Date)
 weather$doy <- yday(weather$dateF)
 weather$hour <- hour(weather$dateF)
 weather$year <- year(weather$dateF)
+
+
+# double check VPD
+weather$e.sat <- 0.61078*exp((17.625*weather$AirTemp)/(weather$AirTemp+237.3))
+weather$VPD_calc <- ifelse(weather$VaporPr >5,NA,weather$e.sat - weather$VaporPr)
+
 #### organize soil data
 
 #tms temps:  -6, +2 and +15cm
@@ -107,7 +113,7 @@ weatherHourly <- weather %>%
   group_by(year, doy, hour) %>%
   summarise(Precip = sum(Precip, na.rm=TRUE),
             n_Precip = length(na.omit(Precip)),
-            VPD_hr = mean(VPD, na.rm=TRUE),
+            VPD_hr = mean(VPD_calc, na.rm=TRUE),
             S_Rad = mean(SolRad, na.rm=TRUE),
             Air_temp = mean(AirTemp, na.rm=TRUE),
             AtmosPr=  mean(AtmosPr, na.rm=TRUE))%>%
@@ -128,4 +134,4 @@ weatherDaily <- weatherHourly %>%
   
 
 
-rm(list=setdiff(ls(), c("soilDaily","soilHourly", "weatherDaily", "weatherHourly","T.L.day","sapflow.hour", "Tot.tree.L.day","dirScript")))
+rm(list=setdiff(ls(), c("soilDaily","soilHourly", "weatherDaily", "weatherHourly","T.L.day","sapflow.hour", "Tot.tree.L.day","dirScript", "sensors")))
