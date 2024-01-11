@@ -400,15 +400,12 @@ ggplot(sapFlow, aes(DD,Js*1000*0.0001*60*60*24, color=Tree.Type))+
 sapFlow$El <- sapFlow$Js *(sapFlow$sap.aream2/sapFlow$LA.m2)
 
 
-# look at El_mm in mm
-sapFlow$El_mm <- (((sapFlow$Js/1000) *(sapFlow$sap.aream2/sapFlow$LA.m2))*1000)*60*60*24
-ggplot(sapFlow, aes(DD,El_mm, color=Tree.Type))+
-  geom_point()
 ggplot(sapFlow, aes(DD,El, color=Tree.Type))+
   geom_point()
 
 # sap flow per hour
 sapFlow$El.hr <- sapFlow$El*60*60
+
 
 sapFlow$hour1 <- floor(sapFlow$hour)
 
@@ -416,6 +413,8 @@ sapFlowNN <- sapFlow %>%
   filter(is.na(El) == FALSE)
 
 sapFlowNN$species <- tolower(sapFlowNN$Tree.Type)
+ggplot(sapFlow, aes(DD, Js, color=Tree.Number))+
+  geom_point()
 
 ##############################
 #### Summary tables    ----
@@ -449,7 +448,7 @@ sapflow.hour <- tree.hour %>%
 
 # daily totals
 
-
+# covert JS to hour to sum to sapflow to day
 Tot.tree.L.day <- tree.hour %>%
   group_by(Tree.Number, doy, species) %>%
   summarise(Tot_El_day = sum(El.hrtt, na.rm=TRUE),
@@ -467,6 +466,6 @@ ggplot(T.L.day, aes(doy, El_day, color=species))+
   geom_point()
 
 
-rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript")))
+rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript", "tree.hour")))
 
    

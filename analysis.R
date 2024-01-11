@@ -40,24 +40,6 @@ source(paste0(dirScript, "/soil_weather.r"))
 T.L.dayW <- left_join(weatherDaily, T.L.day, by=c("doy"))
 Tc.L.day <- left_join(T.L.dayW , soilDaily, by="doy")
 
-### hourly data
-Sap_hemlock <- sapflow.hour %>%
-  filter(species == "hemlock")
-Sap_basswood <- sapflow.hour %>%
-  filter(species == "basswood")
-
-dateAll <- data.frame( doy = rep(seq(160,151), each=24),
-                       hour = rep(seq(0,23), times=length(seq(160,151))))
-
-hemDateFill <- full_join(dateAll, Sap_hemlock, by=c("doy","hour"="hour1"))
-bassDateFill <- full_join(dateAll, Sap_basswood, by=c("doy","hour"="hour1"))
-# join weather
-bassWeather <- full_join(weatherHourly, bassDateFill, by=c("doy","hour"))
-hemWeather <- full_join(weatherHourly, hemDateFill, by=c("doy","hour"))
-
-
-sap_all <- rbind(bassWeather, hemWeather)
-
 # join in some daily weather stats for quality filters
 dailyPrecip <- data.frame( doy = weatherDaily$doy,
                            dayPrec = weatherDaily$Prec)
