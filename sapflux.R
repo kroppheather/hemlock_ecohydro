@@ -23,6 +23,8 @@ colnames(weather) <- c("Date","SolRad","Precip","LightningAct","LightningDist","
                           "GustSpeed","AirTemp","VaporPr","AtmosPr","XLevel","YLevel","MaxPrecip",
                           "SensorTemp","VPD","BatPct","BatVolt","RefPr","LogTemp")
 
+
+
 weatherInfo <- read.csv(paste0(dirData[dirUser], "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
                          nrows=3, header=FALSE)
 # allometry
@@ -141,27 +143,75 @@ datSap <- datSap %>%
 tabledt <- datSap
 
 
-dtAll <- data.frame(date= rep(tabledt$date, times = 16),
-                    doy = rep(tabledt$doy, times = 16),
-                    hour = rep(tabledt$hour, times = 16),
-                    DD = rep(tabledt$DD, times = 16),
+# quantile filter: removes large spikes in change in temperature that are 
+# greater than 1% the quantile change for all sensors
+
+for(i in 3:18){
+  tabledt[,i] <- ifelse(tabledt[,i] <= 5 | tabledt[,i] >= 13, NA, tabledt[,i])
+}
+
+tableChange <- matrix(rep(NA,nrow(tabledt)*ncol(tabledt)), ncol=ncol(tabledt))
+for(i in 3:18){
+  for(j in 2:nrow(tableChange)){
+    tableChange[j,i] <-  abs(tabledt[j,i] - tabledt[(j-1),i])
+  }
+}
+
+tableChangeL <- list()
+for(i in 3:18){
+  tableChangeL[[i]] <- quantile(tableChange[,i], probs=seq(0,1,by=0.01),na.rm=TRUE)
+}
+# create a flag variable
+changeFlag <- matrix(rep(NA,nrow(tabledt)*ncol(tabledt)), ncol=ncol(tabledt))
+for(i in 3:18){
+  for(j in 2:nrow(tableChange)){
+    changeFlag[j,i] <-  ifelse(tableChange[j,i] >= 0.5,NA,1)
+  }
+} 
+# multiple dt by flag so that flagged values are given a NA
+tabledtF <- tabledt
+for(i in 3:18){
+  for(j in 2:nrow(tableChange)){
+    tabledtF[j,i] <- changeFlag[j,i]*tabledtF[j,i]
+  }
+}
+
+# organize dT into a data frame
+
+plot(tabledt$DD, tabledtF[,3], type="l")
+
+
+dtAll <- data.frame(date= rep(tabledtF$date, times = 16),
+                    doy = rep(tabledtF$doy, times = 16),
+                    hour = rep(tabledtF$hour, times = 16),
+                    DD = rep(tabledtF$DD, times = 16),
                     sensor = rep(seq(1,16), each = nrow(tabledt)),
-                    dT = c(tabledt[,3],
-                           tabledt[,4],
-                           tabledt[,5],
-                           tabledt[,6],
-                           tabledt[,7],
-                           tabledt[,8],
-                           tabledt[,9],
-                           tabledt[,10],
-                           tabledt[,11],
-                           tabledt[,12],
-                           tabledt[,13],
-                           tabledt[,14],
-                           tabledt[,15],
-                           tabledt[,16],
-                           tabledt[,17],
-                           tabledt[,18]))
+                    dT = c(tabledtF[,3],
+                           tabledtF[,4],
+                           tabledtF[,5],
+                           tabledtF[,6],
+                           tabledtF[,7],
+                           tabledtF[,8],
+                           tabledtF[,9],
+                           tabledtF[,10],
+                           tabledtF[,11],
+                           tabledtF[,12],
+                           tabledtF[,13],
+                           tabledtF[,14],
+                           tabledtF[,15],
+                           tabledtF[,16],
+                           tabledtF[,17],
+                           tabledtF[,18]))
+
+
+weather$dateF <- mdy_hms(weather$Date)
+weather$doy <- yday(weather$dateF)
+weather$hour <- hour(weather$dateF)+(minute(weather$dateF)/60)
+weather$DD <- weather$doy + (weather$hour/24)
+weatherVPD <- data.frame(doy=weather$doy,
+                         hour=weather$hour,
+                         DD = weather$DD,
+                         VPD=weather$VPD)
 
 ggplot(dtAll, aes(DD, dT, color=as.factor(sensor)))+
   geom_point()+
@@ -172,12 +222,8 @@ ggplot(dtAll, aes(DD, dT, color=as.factor(sensor)))+
 
 
 quantile(dtAll$dT,probs=seq(0,1,by=0.01), na.rm=TRUE)
-# quantile filter: removes 1% outliers
-dtAll <- dtAll %>%
-  filter(dT >=4 & dT <= 11)
 
-dtPlot <- dtAll %>%
-  filter(sensor == 5)
+
 ggplot(dtAll, aes(DD, dT, color=as.factor(sensor)))+
   geom_point()+
   geom_line()
@@ -194,8 +240,12 @@ ggplot( dtAll %>%
 #make a doy that contains the same night
 #so new day actually starts at 5 am not midnight
 dtAll$doy5 <- ifelse(dtAll$hour < 5, dtAll$doy-1,dtAll$doy)
+weatherVPD$doy5 <- ifelse(weatherVPD$hour < 5, weatherVPD$doy-1,weatherVPD$doy)
 
-night <- dtAll[dtAll$hour < 5|dtAll$hour >= 22,]
+night <- dtAll[dtAll$hour < 5|dtAll$hour >= 23,]
+nightVPD <- weatherVPD %>%
+  filter(hour <= 5 | hour >= 23)
+
 
 #filter night so maximum in day and sensor is provided
 maxnight1 <- night %>%
@@ -207,6 +257,16 @@ maxnight <- maxnight1  %>%
   group_by(sensor, doy5) %>%
   filter(hour == min(hour),na.rm=TRUE)
 
+#get minimum VPD each night
+minVnight1 <- nightVPD %>%
+  group_by( doy5) %>%
+  filter(VPD == min(VPD),na.rm=TRUE)
+#remove duplicate maximums that occur for longer than 15 min
+#just take earliest measurement
+minVnight <- minVnight1  %>%
+  group_by( doy5) %>%
+  filter(hour == min(hour),na.rm=TRUE)
+
 #ggplot(maxnight, aes(doy5,dT, color=sensor))+
 #geom_point()
 #isolate max and join back into table
@@ -214,8 +274,16 @@ maxJoin <- data.frame(sensor=maxnight$sensor,
                       doy5=maxnight$doy5,
                       maxDT = maxnight$dT)
 
+maxVComp <- left_join(maxJoin, minVnight, by="doy5")
+# double check there doesn't seem to be a clear influences of 
+ggplot(maxVComp , aes(VPD,maxDT, color=as.factor(sensor)))+
+  geom_point()
+
 ggplot(maxJoin, aes(doy5, maxDT, color = as.factor(sensor)))+
   geom_line()+
+  geom_point()
+
+ggplot(maxVComp , aes(doy5,VPD, color=as.factor(sensor)))+
   geom_point()
 
 
@@ -223,7 +291,10 @@ ggplot(maxJoin%>%filter(sensor == 10), aes(doy5, maxDT, color = as.factor(sensor
   geom_line()+
   geom_point()
 
-
+ggplot( dtAll %>%
+          filter(sensor == 10), aes(DD, dT))+
+  geom_point()+
+  geom_line()
 
 # calculate rolling average. Create a continuous day df
 dayAllDF <- data.frame(sensor = rep(unique(maxJoin$sensor), each=length(seq(166,250))),
@@ -257,6 +328,8 @@ maxReshapeQ <- maxReshape
     maxReshapeQ[,i] <- changeF[,i]*maxReshape[,i]
   }
 
+plot(maxReshapeQ[,1], maxReshapeQ[,11])
+
 rollAve <- matrix(rep(NA, nrow(maxReshapeQ)*ncol(maxReshapeQ)), ncol=ncol(maxReshapeQ))
 rollAve[,1] <- maxReshapeQ$doy5
 for(i in 2:ncol(rollAve)){
@@ -264,12 +337,15 @@ for(i in 2:ncol(rollAve)){
   rollAve[2,i] <- mean(maxReshapeQ[1:2,i], na.rm=TRUE)
   rollAve[3,i] <- mean(maxReshapeQ[1:3,i], na.rm=TRUE)
   rollAve[4,i] <- mean(maxReshapeQ[1:4,i], na.rm=TRUE)
-  rollAve[5,i] <- mean(maxReshapeQ[1:5,i], na.rm=TRUE)
-  rollAve[6,i] <- mean(maxReshapeQ[1:6,i], na.rm=TRUE)
-  for(j in 7:nrow(rollAve)){
-    rollAve[j,i] <- mean(maxReshapeQ[(j-6):j,i], na.rm=TRUE)
+  for(j in 5:nrow(rollAve)){
+    rollAve[j,i] <- mean(maxReshapeQ[(j-4):j,i], na.rm=TRUE)
   }
   
+}
+
+# turn filtered anomalous spikes in temp out by turning back in NAs in change flag
+for(i in 2:ncol(rollAve)){
+  rollAve[,i] <- changeF[,i]*rollAve[,i]
 }
 
 aveMaxDT <- data.frame(sensor=rep(unique(maxJoin$sensor), each= nrow(rollAve)),
@@ -289,6 +365,9 @@ aveMaxDT <- data.frame(sensor=rep(unique(maxJoin$sensor), each= nrow(rollAve)),
                                  rollAve[,14],
                                  rollAve[,15],
                                  rollAve[,16]))
+
+ggplot(aveMaxDT, aes(doy5, maxDT, color=as.factor(sensor)))+
+  geom_point()
 
 #join backinto tabledt
 dtCalct1 <- left_join(dtAll,  aveMaxDT, by=c("sensor","doy5"))
@@ -538,7 +617,7 @@ Tot.tree.L.day <- tree.hour %>%
   group_by(Tree.Number, doy, species) %>%
   summarise(Tot_El_day = sum(El.hrtt, na.rm=TRUE),
             Tot_n_day = length(na.omit(El.hrtt))) %>%
-  filter(Tot_n_day >=22)
+  filter(Tot_n_day >=21)
 
 T.L.day <- Tot.tree.L.day %>%
   group_by( doy, species) %>%
@@ -548,6 +627,14 @@ T.L.day <- Tot.tree.L.day %>%
   filter(n_plant >= 3)
 
 ggplot(T.L.day, aes(doy, El_day, color=species))+
+  geom_point()+
+  geom_line()
+
+ggplot(sapflow.hour%>%filter(doy==220), aes(hour1, Js, color=species))+
+  geom_point()+
+  geom_line()
+
+ggplot(sapflow.hour%>%filter(doy==241 ), aes(hour1, Js, color=species))+
   geom_point()+
   geom_line()
 
