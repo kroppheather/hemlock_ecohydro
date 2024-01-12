@@ -53,6 +53,10 @@ corTest <- na.omit(left_join(soilDaily,dailyPrecip, by="doy"))
 
 plot(corTest$SWC, corTest$weekPr)
 cor(corTest$SWC, corTest$weekPr)
+plot(corTest$s_temp, corTest$weekPr)
+cor(corTest$s_temp, corTest$weekPr)
+plot(corTest$s_temp, corTest$SWC)
+cor(corTest$s_temp, corTest$SWC)
 
 
 T_L_day <- left_join(Tc.L.day, dailyPrecip, by="doy")
@@ -85,13 +89,33 @@ ggplot(T_L_day, aes(SWC, El_day, color=species))+
 ggplot(T_L_day, aes(s_temp, El_day, color=species))+
   geom_point()
 
-ggplot(T_L_day, aes(s_temp, SWC))+
-  geom_point()
 
-ggplot(T_L_day, aes(s_temp, weekPr))+
-  geom_point()
+# look at patterns in sap flow
+sapflow.hour$Js
 
-TN <- na.omit(T_L_day)
+ggplot(sapflow.hour%>%filter(doy==170), aes(hour1, Js, color=species))+
+  geom_point()+
+  geom_line()
 
-  cor(TN$s_temp, TN$weekPr)
-  cor(TN$s_temp, TN$SWC)
+ggplot(sapflow.hour%>%filter(doy==171), aes(hour1, Js, color=species))+
+  geom_point()+
+  geom_line()
+
+ggplot(sapflow.hour%>%filter(doy==172), aes(hour1, Js, color=species))+
+  geom_point()+
+  geom_line()
+
+ggplot(sapflow.hour%>%filter(doy==174), aes(hour1, Js, color=species))+
+  geom_point()+
+  geom_line()
+
+
+ggplot(sapflow.hour%>%filter(doy==175), aes(hour1, Js, color=species))+
+  geom_point()+
+  geom_line()
+
+
+ggplot(sapflow.hour%>%filter(doy==226), aes(hour1, Js, color=species))+
+  geom_point()+
+  geom_line()
+
