@@ -219,8 +219,79 @@ ggplot(maxJoin, aes(doy5, maxDT, color = as.factor(sensor)))+
   geom_point()
 
 
+ggplot(maxJoin%>%filter(sensor == 10), aes(doy5, maxDT, color = as.factor(sensor)))+
+  geom_line()+
+  geom_point()
+
+
+
+# calculate rolling average. Create a continuous day df
+dayAllDF <- data.frame(sensor = rep(unique(maxJoin$sensor), each=length(seq(166,250))),
+                         doy5 = rep(seq(166,250), times=length(unique(maxJoin$sensor))))
+
+maxAllDays <- left_join(dayAllDF, maxJoin, by=c("sensor", "doy5"))
+
+maxReshape <- reshape(maxAllDays, direction="wide", idvar="doy5", timevar="sensor")
+
+changeMat <- matrix(rep(NA, nrow(maxReshape)*ncol(maxReshape)), ncol=ncol(maxReshape))
+changeMat[,1] <- maxReshape$doy5
+for(i in 2:ncol(changeMat)){
+  changeMat[1,i] <- NA
+  for(j in 2:nrow(changeMat)){
+    changeMat[j,i] <- maxReshape[j,i]-maxReshape[(j-1),i]
+  }
+}
+
+changeQ <- list()
+for(i in 2:ncol(changeMat)){
+  changeQ[[i]] <- quantile(changeMat[,i], probs=seq(0,1,by=0.01), na.rm=TRUE)
+}
+changeF <- matrix(rep(1, nrow(maxReshape)*ncol(maxReshape)), ncol=ncol(maxReshape))
+for(i in 2:ncol(changeMat)){
+  for(j in 2:nrow(changeMat)){
+    changeF[j,i] <- ifelse(changeMat[j,i] >=0.4 | changeMat[j,i] <= -0.4,NA,1)
+  }
+}
+maxReshapeQ <- maxReshape
+  for(i in 2:ncol(maxReshapeQ)){
+    maxReshapeQ[,i] <- changeF[,i]*maxReshape[,i]
+  }
+
+rollAve <- matrix(rep(NA, nrow(maxReshapeQ)*ncol(maxReshapeQ)), ncol=ncol(maxReshapeQ))
+rollAve[,1] <- maxReshapeQ$doy5
+for(i in 2:ncol(rollAve)){
+  rollAve[1,i] <- maxReshapeQ[1,i]
+  rollAve[2,i] <- mean(maxReshapeQ[1:2,i], na.rm=TRUE)
+  rollAve[3,i] <- mean(maxReshapeQ[1:3,i], na.rm=TRUE)
+  rollAve[4,i] <- mean(maxReshapeQ[1:4,i], na.rm=TRUE)
+  rollAve[5,i] <- mean(maxReshapeQ[1:5,i], na.rm=TRUE)
+  rollAve[6,i] <- mean(maxReshapeQ[1:6,i], na.rm=TRUE)
+  for(j in 7:nrow(rollAve)){
+    rollAve[j,i] <- mean(maxReshapeQ[(j-6):j,i], na.rm=TRUE)
+  }
+  
+}
+
+aveMaxDT <- data.frame(sensor=rep(unique(maxJoin$sensor), each= nrow(rollAve)),
+                       doy5 = rep(rollAve[,1], times=length(unique(maxJoin$sensor))),
+                       maxDT = c(rollAve[,2],
+                                 rollAve[,3],
+                                 rollAve[,4],
+                                 rollAve[,5],
+                                 rollAve[,6],
+                                 rollAve[,7],
+                                 rollAve[,8],
+                                 rollAve[,9],
+                                 rollAve[,10],
+                                 rollAve[,11],
+                                 rollAve[,12],
+                                 rollAve[,13],
+                                 rollAve[,14],
+                                 rollAve[,15],
+                                 rollAve[,16]))
+
 #join backinto tabledt
-dtCalct1 <- left_join(dtAll, maxJoin, by=c("sensor","doy5"))
+dtCalct1 <- left_join(dtAll,  aveMaxDT, by=c("sensor","doy5"))
 #join sensor info
 dtCalc <- left_join(dtCalct1 , sensors, by=c("sensor"="Sensor.Number"))
 
@@ -243,14 +314,18 @@ dtCalc$b <- 1 - dtCalc$a
 # velo is refered to  as Js in Ewers it is m3 of water per m-2 of sap flow per s
 # this can reduce in dimension to m per s
 dtCalc$dTCor <- (dtCalc$dT - (dtCalc$b * dtCalc$maxDT))/dtCalc$a
-dtCalc$K <- (dtCalc$maxDT - dtCalc$dTCor)/dtCalc$dTCor
+# since this is a rolling average assume any value above the max
+# is equivalent to the maximum temp and set flow to zero
+dtCalc$K <- ifelse(dtCalc$dTCor > dtCalc$maxDT, 0,
+  (dtCalc$maxDT - dtCalc$dTCor)/dtCalc$dTCor)
+
 ggplot(dtCalc %>% filter(sensor == 15), aes(DD, K))+
   geom_point()
 
 
 dtCalc$velo <- 0.000119*(dtCalc$K^1.231)
 
-ggplot(dtCalc%>% filter(sensor == 13), aes(DD, velo, color=Tree.Type))+
+ggplot(dtCalc%>% filter(sensor == 16), aes(DD, velo, color=Tree.Type))+
   geom_point()
 
 #separate types
@@ -261,6 +336,10 @@ ggplot(hemlockT, aes(DD, velo, color=as.factor(sensor)))+
          geom_point()+
          geom_line()
 
+ggplot(basswoodT, aes(DD, velo, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()
+
 # filter anything above the 98 percentile
 hemlockQ <- quantile(hemlockT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
 
@@ -269,11 +348,14 @@ hemlock <- hemlockT %>%
 
 basswoodQ <- quantile(basswoodT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
 
-
-basswood <-basswoodT %>%
-  filter(velo <= basswoodQ[99])
+# basswood has no weird spikes
+basswood <-basswoodT 
 
 ggplot(hemlock, aes(DD, velo, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()
+
+ggplot(hemlock%>% filter(doy>=169 & doy<=175), aes(DD, velo, color=as.factor(sensor)))+
   geom_point()+
   geom_line()
 
@@ -392,9 +474,7 @@ sapFlow$Js <- sapFlow$velo.cor * 1000
 # look at Js in grams per m2 per s
 ggplot(sapFlow, aes(DD,Js*1000, color=Tree.Type))+
   geom_point()
-# look at Js in grams per cm2 per day
-ggplot(sapFlow, aes(DD,Js*1000*0.0001*60*60*24, color=Tree.Type))+
-  geom_point()
+
 
 
 #Calculate El
@@ -443,12 +523,12 @@ sapflow.hour <- tree.hour %>%
   group_by(doy, hour1, species) %>%
   summarise(Js = mean(Jst, na.rm=TRUE),
             sd_Js = sd(Jst, na.rm=TRUE),
-            n = length(na.omit(Jst)),
+            n_Js = length(na.omit(Jst)),
             El = mean(Elt, na.rm=TRUE),
             sd_El = sd(Elt, na.rm=TRUE),
             El_hr = mean(El.hrtt, na.rm=TRUE),
-            sd_Elhr = sd(El.hrtt, na.rm=TRUE)) %>%
-  filter(n >= 3)
+            sd_Elhr = sd(El.hrtt, na.rm=TRUE))%>%
+  filter(n_Js >= 3) 
 
 
 # daily totals
@@ -468,7 +548,8 @@ T.L.day <- Tot.tree.L.day %>%
   filter(n_plant >= 3)
 
 ggplot(T.L.day, aes(doy, El_day, color=species))+
-  geom_point()
+  geom_point()+
+  geom_line()
 
 
 rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript", "tree.hour", "sensors")))
