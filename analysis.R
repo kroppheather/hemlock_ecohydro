@@ -74,27 +74,24 @@ ggplot(T_L_day, aes(maxVPD, El_day, color=species))+
 ggplot(T_L_day, aes(weekPr, El_day, color=species))+
   geom_point()
 
-ggplot(T_L_day%>%filter(species == "basswood"), aes(log(weekPr), El_day))+
-  geom_point()
-
-ggplot(T_L_day%>%filter(species == "hemlock"), aes(log(weekPr), El_day))+
-  geom_point()
 
 ggplot(T_L_day, aes(SWC, weekPr))+
   geom_point()
 
-ggplot(T_L_day, aes(log(SWC), El_day, color=species))+
+ggplot(T_L_day, aes(SWC, El_day, color=species))+
   geom_point()
 
-ggplot(T_L_day%>%filter(species == "hemlock"), aes(log(SWC), El_day))+
-  geom_point()
-
-
-ggplot(T_L_day%>%filter(species == "basswood"), aes(log(SWC), El_day))+
-  geom_point()
 
 ggplot(T_L_day, aes(s_temp, El_day, color=species))+
   geom_point()
 
-ggplot(T_L_day, aes(doy, El_day, color=species))+
+ggplot(T_L_day, aes(s_temp, SWC))+
   geom_point()
+
+ggplot(T_L_day, aes(s_temp, weekPr))+
+  geom_point()
+
+TN <- na.omit(T_L_day)
+
+  cor(TN$s_temp, TN$weekPr)
+  cor(TN$s_temp, TN$SWC)
