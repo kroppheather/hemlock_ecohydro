@@ -7,7 +7,7 @@ library(dplyr)
 dirUser <- 2
 
 dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro",
-             "E:/Google Drive/research/projects/kirkland_ecohydro")
+             "G:/My Drive/research/projects/kirkland_ecohydro")
 
 
 weather <- read.csv(paste0(dirData[dirUser],"/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"),
