@@ -7,7 +7,7 @@ library(dplyr)
 dirUser <- 2
 
 dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro",
-             "E:/Google Drive/research/projects/kirkland_ecohydro")
+             "G:/My Drive/research/projects/kirkland_ecohydro")
 
 # sap flow
 sapRaw <- read.csv(paste0(dirData[dirUser],"/sapflow/09_08_2022/Sapflow_TableDT.dat"),
@@ -120,6 +120,16 @@ for(i in 1:nrow(sensors)){
   }
 }
 sensors$LA.m2 <- LA.m2
+
+# correction calcs for sap flow based on Clearwater
+
+
+#a = proportion of probe in sapwood and b=1-a
+
+sensors$a <- ifelse(sensors$sd.cm >= 3,1,
+                    sensors$sd.cm/3)
+
+sensors$b <- 1 - sensors$a
 
 #### organize sap flow ----
 
@@ -237,57 +247,61 @@ ggplot( dtAll %>%
 #### sap flow calculations ----
 
 #join sensor info into table dt
-#make a doy that contains the same night
-#so new day actually starts at 5 am not midnight
-dtAll$doy5 <- ifelse(dtAll$hour < 5, dtAll$doy-1,dtAll$doy)
-weatherVPD$doy5 <- ifelse(weatherVPD$hour < 5, weatherVPD$doy-1,weatherVPD$doy)
+# make the cut off midnight 
 
-night <- dtAll[dtAll$hour < 5|dtAll$hour >= 23,]
+night <- dtAll[dtAll$hour < 5,]
 nightVPD <- weatherVPD %>%
-  filter(hour <= 5 | hour >= 23)
+  filter(hour <= 5 )
 
 
 #filter night so maximum in day and sensor is provided
 maxnight1 <- night %>%
-  group_by(sensor, doy5) %>%
+  group_by(sensor, doy) %>%
   filter(dT == max(dT),na.rm=TRUE)
 #remove duplicate maximums that occur for longer than 15 min
 #just take earliest measurement
 maxnight <- maxnight1  %>%
-  group_by(sensor, doy5) %>%
+  group_by(sensor, doy) %>%
   filter(hour == min(hour),na.rm=TRUE)
 
 #get minimum VPD each night
 minVnight1 <- nightVPD %>%
-  group_by( doy5) %>%
+  group_by( doy) %>%
   filter(VPD == min(VPD),na.rm=TRUE)
 #remove duplicate maximums that occur for longer than 15 min
 #just take earliest measurement
 minVnight <- minVnight1  %>%
-  group_by( doy5) %>%
+  group_by( doy) %>%
   filter(hour == min(hour),na.rm=TRUE)
 
-#ggplot(maxnight, aes(doy5,dT, color=sensor))+
-#geom_point()
+
 #isolate max and join back into table
 maxJoin <- data.frame(sensor=maxnight$sensor,
-                      doy5=maxnight$doy5,
+                      doy=maxnight$doy,
                       maxDT = maxnight$dT)
 
-maxVComp <- left_join(maxJoin, minVnight, by="doy5")
+maxVComp <- left_join(maxJoin, minVnight, by="doy")
 # double check there doesn't seem to be a clear influences of 
 ggplot(maxVComp , aes(VPD,maxDT, color=as.factor(sensor)))+
   geom_point()
 
-ggplot(maxJoin, aes(doy5, maxDT, color = as.factor(sensor)))+
+ggplot(maxJoin, aes(doy, maxDT, color = as.factor(sensor)))+
   geom_line()+
   geom_point()
 
-ggplot(maxVComp , aes(doy5,VPD, color=as.factor(sensor)))+
+ggplot(maxVComp , aes(doy,VPD, color=as.factor(sensor)))+
   geom_point()
 
 
-ggplot(maxJoin%>%filter(sensor == 10), aes(doy5, maxDT, color = as.factor(sensor)))+
+ggplot(maxJoin%>%filter(sensor == 5), aes(doy, maxDT, color = as.factor(sensor)))+
+  geom_line()+
+  geom_point()
+
+
+ggplot(maxJoin%>%filter(sensor == 6), aes(doy, maxDT, color = as.factor(sensor)))+
+  geom_line()+
+  geom_point()
+ggplot(maxJoin%>%filter(sensor == 10), aes(doy, maxDT, color = as.factor(sensor)))+
   geom_line()+
   geom_point()
 
@@ -298,79 +312,17 @@ ggplot( dtAll %>%
 
 # calculate rolling average. Create a continuous day df
 dayAllDF <- data.frame(sensor = rep(unique(maxJoin$sensor), each=length(seq(166,250))),
-                         doy5 = rep(seq(166,250), times=length(unique(maxJoin$sensor))))
+                         doy = rep(seq(166,250), times=length(unique(maxJoin$sensor))))
 
-maxAllDays <- left_join(dayAllDF, maxJoin, by=c("sensor", "doy5"))
+maxAllDays <- left_join(dayAllDF, maxJoin, by=c("sensor", "doy"))
 
-maxReshape <- reshape(maxAllDays, direction="wide", idvar="doy5", timevar="sensor")
 
-changeMat <- matrix(rep(NA, nrow(maxReshape)*ncol(maxReshape)), ncol=ncol(maxReshape))
-changeMat[,1] <- maxReshape$doy5
-for(i in 2:ncol(changeMat)){
-  changeMat[1,i] <- NA
-  for(j in 2:nrow(changeMat)){
-    changeMat[j,i] <- maxReshape[j,i]-maxReshape[(j-1),i]
-  }
-}
 
-changeQ <- list()
-for(i in 2:ncol(changeMat)){
-  changeQ[[i]] <- quantile(changeMat[,i], probs=seq(0,1,by=0.01), na.rm=TRUE)
-}
-changeF <- matrix(rep(1, nrow(maxReshape)*ncol(maxReshape)), ncol=ncol(maxReshape))
-for(i in 2:ncol(changeMat)){
-  for(j in 2:nrow(changeMat)){
-    changeF[j,i] <- ifelse(changeMat[j,i] >=0.4 | changeMat[j,i] <= -0.4,NA,1)
-  }
-}
-maxReshapeQ <- maxReshape
-  for(i in 2:ncol(maxReshapeQ)){
-    maxReshapeQ[,i] <- changeF[,i]*maxReshape[,i]
-  }
-
-plot(maxReshapeQ[,1], maxReshapeQ[,11])
-
-rollAve <- matrix(rep(NA, nrow(maxReshapeQ)*ncol(maxReshapeQ)), ncol=ncol(maxReshapeQ))
-rollAve[,1] <- maxReshapeQ$doy5
-for(i in 2:ncol(rollAve)){
-  rollAve[1,i] <- maxReshapeQ[1,i]
-  rollAve[2,i] <- mean(maxReshapeQ[1:2,i], na.rm=TRUE)
-  rollAve[3,i] <- mean(maxReshapeQ[1:3,i], na.rm=TRUE)
-  rollAve[4,i] <- mean(maxReshapeQ[1:4,i], na.rm=TRUE)
-  for(j in 5:nrow(rollAve)){
-    rollAve[j,i] <- mean(maxReshapeQ[(j-4):j,i], na.rm=TRUE)
-  }
-  
-}
-
-# turn filtered anomalous spikes in temp out by turning back in NAs in change flag
-for(i in 2:ncol(rollAve)){
-  rollAve[,i] <- changeF[,i]*rollAve[,i]
-}
-
-aveMaxDT <- data.frame(sensor=rep(unique(maxJoin$sensor), each= nrow(rollAve)),
-                       doy5 = rep(rollAve[,1], times=length(unique(maxJoin$sensor))),
-                       maxDT = c(rollAve[,2],
-                                 rollAve[,3],
-                                 rollAve[,4],
-                                 rollAve[,5],
-                                 rollAve[,6],
-                                 rollAve[,7],
-                                 rollAve[,8],
-                                 rollAve[,9],
-                                 rollAve[,10],
-                                 rollAve[,11],
-                                 rollAve[,12],
-                                 rollAve[,13],
-                                 rollAve[,14],
-                                 rollAve[,15],
-                                 rollAve[,16]))
-
-ggplot(aveMaxDT, aes(doy5, maxDT, color=as.factor(sensor)))+
+ggplot(maxAllDays, aes(doy, maxDT, color=as.factor(sensor)))+
   geom_point()
 
 #join backinto tabledt
-dtCalct1 <- left_join(dtAll,  aveMaxDT, by=c("sensor","doy5"))
+dtCalct1 <- left_join(dtAll, maxAllDays, by=c("sensor","doy"))
 #join sensor info
 dtCalc <- left_join(dtCalct1 , sensors, by=c("sensor"="Sensor.Number"))
 
@@ -384,12 +336,6 @@ dtCalc <- left_join(dtCalct1 , sensors, by=c("sensor"="Sensor.Number"))
 #otherwise correction is:
 #dt sap = (dT - b* Dtmax)/a
 
-#a = proportion of probe in sapwood and b=1-a
-
-dtCalc$a <- ifelse(dtCalc$sd.cm >= 3,1,
-                   dtCalc$sd.cm/3)
-
-dtCalc$b <- 1 - dtCalc$a
 # velo is refered to  as Js in Ewers it is m3 of water per m-2 of sap flow per s
 # this can reduce in dimension to m per s
 dtCalc$dTCor <- (dtCalc$dT - (dtCalc$b * dtCalc$maxDT))/dtCalc$a
@@ -404,7 +350,7 @@ ggplot(dtCalc %>% filter(sensor == 15), aes(DD, K))+
 
 dtCalc$velo <- 0.000119*(dtCalc$K^1.231)
 
-ggplot(dtCalc%>% filter(sensor == 16), aes(DD, velo, color=Tree.Type))+
+ggplot(dtCalc%>% filter(sensor == 10), aes(DD, velo, color=Tree.Type))+
   geom_point()
 
 #separate types
@@ -448,6 +394,7 @@ ggplot(basswood, aes(DD, velo, color=as.factor(sensor)))+
 
 #############
 #compare N & S sensors for hemlock
+# this tree has abnormal dT fluctuations and flow. Omitted from analysis
 sens5 <- na.omit(data.frame(date = hemlock$date[hemlock$sensor == 5],
                             veloN = hemlock$velo[hemlock$sensor == 5]))
 
@@ -474,7 +421,7 @@ sens14 <- na.omit(data.frame(date = hemlock$date[hemlock$sensor == 14],
 
 treeD3 <- inner_join(sens15,sens14, by="date")
 
-treeDirHem <- na.omit(rbind(treeD1,treeD2,treeD3))
+treeDirHem <- na.omit(rbind(treeD2,treeD3))
 #check relationship
 azim.rel <- lm(treeDirHem$veloS ~ treeDirHem$veloN)
 summary(azim.rel)
@@ -519,9 +466,14 @@ ggplot(treeBDir, aes(veloN,veloS))+
   geom_point()+
   geom_abline()
 
+# remove trees with issues
+# that include irregular changes in dT and
+# high nocturnal flow and erratic patterns that are not diurnal
+hemlock.filter <- hemlock %>%
+  filter(Tree.Number != 3 & Tree.Number != 5)
 
 
-hemlock.tree <- hemlock %>%
+hemlock.tree <- hemlock.filter %>%
   filter(Direction == "N")
 
 basswood.tree <- basswood %>%
@@ -537,13 +489,10 @@ basswood.tree$velo.cor <- (basswood.tree$velo*0.5)+(((basswood.tree$velo*basswoo
 
 ## bind trees back together
 
+
 sapFlow <- rbind(hemlock.tree, basswood.tree)
 
-ggplot(sapFlow, aes(DD, velo.cor, color=as.factor(Tree.Number)))+
-  geom_point()
 
-ggplot(sapFlow %>% filter(Tree.Number == 6), aes(DD, velo.cor,))+
-  geom_point()
 
 #### El calculations   ----
 # for comparison of flow and E  from Ewers
@@ -566,6 +515,18 @@ sapFlow$El <- sapFlow$Js *(sapFlow$sap.aream2/sapFlow$LA.m2)
 
 ggplot(sapFlow, aes(DD,El, color=Tree.Type))+
   geom_point()
+
+ggplot(sapFlow %>% filter(Tree.Type=="Hemlock"& doy >=220 & doy <= 230), aes(DD,El, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()
+
+ggplot(sapFlow %>% filter(Tree.Type=="Hemlock"& doy >=180 & doy <= 182), aes(DD,El, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()
+
+ggplot(sapFlow %>% filter(Tree.Type=="Basswood"& doy >=180 & doy <= 190), aes(DD,El, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()
 
 # sap flow per hour
 sapFlow$El.hr <- sapFlow$El*60*60
@@ -616,21 +577,21 @@ sapflow.hour <- tree.hour %>%
 Tot.tree.L.day <- tree.hour %>%
   group_by(Tree.Number, doy, species) %>%
   summarise(Tot_El_day = sum(El.hrtt, na.rm=TRUE),
-            Tot_n_day = length(na.omit(El.hrtt))) %>%
-  filter(Tot_n_day >=21)
-
+            Tot_n_day = length(na.omit(El.hrtt)))%>%
+  filter(Tot_n_day >=22)
+# Kg m-2 leaf day day
 T.L.day <- Tot.tree.L.day %>%
   group_by( doy, species) %>%
   summarise(El_day = mean(Tot_El_day), # per tree
             sd_El = sd(Tot_El_day),
-            n_plant = length(na.omit(Tot_El_day))) %>% 
+            n_plant = length(na.omit(Tot_El_day)))%>% 
   filter(n_plant >= 3)
 
 ggplot(T.L.day, aes(doy, El_day, color=species))+
   geom_point()+
   geom_line()
 
-ggplot(sapflow.hour%>%filter(doy==220), aes(hour1, Js, color=species))+
+ggplot(sapflow.hour%>%filter(doy==182), aes(hour1, Js, color=species))+
   geom_point()+
   geom_line()
 
