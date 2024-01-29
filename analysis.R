@@ -59,6 +59,7 @@ plot(corTest$s_temp, corTest$SWC)
 cor(corTest$s_temp, corTest$SWC)
 
 
+
 T_L_day <- left_join(Tc.L.day, dailyPrecip, by="doy")
 # note that L per day works out to mm/day 
 ggplot(T_L_day, aes(doy, El_day, color=species))+
@@ -68,6 +69,20 @@ ggplot(T_L_day, aes(doy, El_day, color=species))+
 
 ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
   geom_point()
+
+ggplot(T_L_day %>% filter(species == "hemlock"), aes(aveVPD, El_day))+
+  geom_point()
+
+ggplot(T_L_day %>% filter(species == "basswood"), aes(aveVPD, El_day))+
+  geom_point()
+HemL_day <- T_L_day %>% filter(species == "hemlock")
+BassL_day <- T_L_day %>% filter(species == "basswood")
+
+VPDmodH <- lm(HemL_day$El_day ~ HemL_day$aveVPD)
+summary(VPDmodH)
+VPDmodB <- lm(BassL_day$El_day ~ BassL_day$aveVPD)
+summary(VPDmodB)
+
 
 ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
   geom_point()
