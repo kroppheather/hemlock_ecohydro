@@ -80,8 +80,8 @@ ggplot(T_L_day %>% filter(species == "hemlock"&aveVPD >0.6), aes(aveVPD, El_day)
 
 ggplot(T_L_day %>% filter(species == "basswood"&aveVPD >0.6), aes(aveVPD, El_day))+
   geom_point()
-HemL_day <- T_L_day %>% filter(species == "hemlock")
-BassL_day <- T_L_day %>% filter(species == "basswood")
+HemL_day <- T_L_day %>% filter(species == "hemlock"&aveVPD >0.6)
+BassL_day <- T_L_day %>% filter(species == "basswood"&aveVPD >0.6)
 
 ggplot(T_L_day %>% filter(species == "hemlock"&aveVPD >0.6), aes(minAirT, El_day))+
   geom_point()
@@ -101,7 +101,10 @@ ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
 ggplot(T_L_day, aes(ave_SW, El_day, color=species))+
   geom_point()
 
-ggplot(T_L_day, aes(weekPr, El_day, color=species))+
+ggplot(HemL_day, aes(maxAirT, El_day, color=species))+
+  geom_point()
+
+ggplot(BassL_day, aes(weekPr, El_day, color=species))+
   geom_point()
 
 
@@ -126,6 +129,9 @@ plot(HemL_day$SWC, residSWH)
 
 qqnorm(residSWH)
 qqline(residSWH)
+
+modSWB <- lm(BassL_day$El_day ~ BassL_day$SWC)
+summary(modSWB)
 
 
 ggplot(T_L_day %>% filter(aveVPD >0.6), aes(doy, El_day, color=species))+
