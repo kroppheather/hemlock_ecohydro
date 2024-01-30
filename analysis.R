@@ -50,6 +50,7 @@ for(i in 7:nrow(dailyPrecip)){
 dailyPrecip$weekPr <- weeklyPrecip
 
 corTest <- na.omit(left_join(soilDaily,dailyPrecip, by="doy"))
+corTest <- left_join(corTest, weatherDaily)
 
 plot(corTest$SWC, corTest$weekPr)
 cor(corTest$SWC, corTest$weekPr)
@@ -57,8 +58,12 @@ plot(corTest$s_temp, corTest$weekPr)
 cor(corTest$s_temp, corTest$weekPr)
 plot(corTest$s_temp, corTest$SWC)
 cor(corTest$s_temp, corTest$SWC)
-
-
+plot(corTest$aveVPD, corTest$max_SW)
+cor(corTest$aveVPD, corTest$max_SW)
+plot(corTest$aveVPD, corTest$ave_SW)
+cor(corTest$aveVPD, corTest$ave_SW)
+plot(corTest$aveVPD, corTest$ave_SW)
+cor(corTest$aveVPD, corTest$ave_SW)
 
 T_L_day <- left_join(Tc.L.day, dailyPrecip, by="doy")
 # note that L per day works out to mm/day 
@@ -70,13 +75,19 @@ ggplot(T_L_day, aes(doy, El_day, color=species))+
 ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
   geom_point()
 
-ggplot(T_L_day %>% filter(species == "hemlock"), aes(aveVPD, El_day))+
+ggplot(T_L_day %>% filter(species == "hemlock"&aveVPD >0.6), aes(aveVPD, El_day))+
   geom_point()
 
-ggplot(T_L_day %>% filter(species == "basswood"), aes(aveVPD, El_day))+
+ggplot(T_L_day %>% filter(species == "basswood"&aveVPD >0.6), aes(aveVPD, El_day))+
   geom_point()
 HemL_day <- T_L_day %>% filter(species == "hemlock")
 BassL_day <- T_L_day %>% filter(species == "basswood")
+
+ggplot(T_L_day %>% filter(species == "hemlock"&aveVPD >0.6), aes(minAirT, El_day))+
+  geom_point()
+
+ggplot(T_L_day %>% filter(species == "basswood"&aveVPD >0.6), aes(minAirT, El_day))+
+  geom_point()
 
 VPDmodH <- lm(HemL_day$El_day ~ HemL_day$aveVPD)
 summary(VPDmodH)
@@ -87,22 +98,38 @@ summary(VPDmodB)
 ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
   geom_point()
 
-ggplot(T_L_day, aes(maxVPD, El_day, color=species))+
+ggplot(T_L_day, aes(ave_SW, El_day, color=species))+
   geom_point()
 
 ggplot(T_L_day, aes(weekPr, El_day, color=species))+
   geom_point()
 
 
-ggplot(T_L_day, aes(SWC, weekPr))+
-  geom_point()
-
 ggplot(T_L_day, aes(SWC, El_day, color=species))+
   geom_point()
 
-
-ggplot(T_L_day, aes(s_temp, El_day, color=species))+
+ggplot(T_L_day %>% filter(species == "hemlock"&aveVPD >0.6), aes(SWC, El_day, color=species))+
   geom_point()
+
+ggplot(T_L_day %>% filter(species == "basswood"&aveVPD >0.6), aes(SWC, El_day, color=species))+
+  geom_point()
+
+
+
+
+modSWH <- lm(HemL_day$El_day ~ HemL_day$SWC)
+summary(modSWH)
+
+residSWH <- residuals(modSWH)
+
+plot(HemL_day$SWC, residSWH)
+
+qqnorm(residSWH)
+qqline(residSWH)
+
+
+ggplot(T_L_day %>% filter(aveVPD >0.6), aes(doy, El_day, color=species))+
+  geom_point()+geom_line()
 
 
 # look at patterns in sap flow

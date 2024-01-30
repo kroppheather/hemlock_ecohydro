@@ -127,7 +127,9 @@ weatherDaily <- weatherHourly %>%
             n_Prec = length(na.omit(Precip)),
             aveVPD = mean(VPD_hr, na.rm=TRUE),
             maxVPD = max(VPD_hr, na.rm=TRUE),
+            minVPD = min(VPD_hr, na.rm=TRUE),
             max_SW = max(S_Rad, na.rm=TRUE),
+            ave_SW = mean(S_Rad, na.rm=TRUE),
             AirT = mean(Air_temp, na.rm=TRUE),
             maxAirT = max(Air_temp, na.rm=TRUE),
             minAirT= min(Air_temp, na.rm=TRUE))
