@@ -29,6 +29,10 @@ source(paste0(dirScript, "/sapflux.r"))
 
 source(paste0(dirScript, "/soil_weather.r"))
 
+# figure directories
+
+dirFig <- "G:/My Drive/research/projects/kirkland_ecohydro/manuscript/figures"
+
 
 #### organize daily data  ----
 TreeInfo <- unique(data.frame(species=sensors$Tree.Type,
@@ -50,7 +54,20 @@ for(i in 7:nrow(dailyPrecip)){
 dailyPrecip$weekPr <- weeklyPrecip
 
 T_L_day <- left_join(Tc.L.day, dailyPrecip, by="doy")
+T_L_day$El_se <- T_L_day$sd_El/sqrt(T_L_day$n_plant)
 # note that L per day works out to mm/day 
+
+# separate out by tree genus
+hemDay <- T_L_day %>%
+  filter(species == "hemlock")
+
+bassDay <- T_L_day %>%
+  filter(species == "basswood")
+
+# met only
+dailyAll1 <- left_join(soilDaily,dailyPrecip, by="doy")
+dailyAll <- left_join(weatherDaily,dailyAll1, by="doy")
+
 
 #### check correlations  ----
 corTest <- na.omit(left_join(soilDaily,dailyPrecip, by="doy"))
@@ -77,10 +94,10 @@ summary(VPDmodB)
 
 
 ############## Figures ------
-basscol <- "#4091E5"
-basscolt <- "#4091E599"
-hemcol <- "#3a5a40"
-hemcolt <- "#3a5a4099"
+basscol <- "#EF5D43"
+basscolt <- "#EF5D4399"
+hemcol <- "#3E9AF0"
+hemcolt <- "#3E9AF099"
 
 ############## Figure 1 daily data ------
 
@@ -94,8 +111,8 @@ y1seq <- seq(0,0.5,by=0.1)
 y1bseq <- seq(0, 35, by=5)
 y2seq <- seq(0,2.4,by=0.2)
 y2bseq <- seq(10,30, by=5)
-y3seq <- seq(0,0.16,by=0.04)
-y4seq <- seq(0,0.02,by=0.01)
+y3seq <- seq(0,0.12,by=0.02)
+y4seq <- seq(0,0.12,by=0.02)
 yl1 <- 0
 yh1 <- 0.5
 
@@ -103,10 +120,10 @@ yl2 <- 0
 yh2 <- 2.5
 
 yl3 <- 0
-yh3 <- 0.17
+yh3 <- 0.12
 
 yl4 <- 0
-yh4 <- 0.02
+yh4 <- 0.12
 
 #axis tick label size
 cax <- 1.75
@@ -145,7 +162,7 @@ for(i in 1:nrow(dailyAll)){
   polygon(c(dailyAll$doy[i]-0.25,dailyAll$doy[i]-0.25,
             dailyAll$doy[i]+0.25,dailyAll$doy[i]+0.25),
           c(0,dailyAll$Prec[i],dailyAll$Prec[i],0)*precipScale,
-          border=NA, col="#C6DAF4")
+          border=NA, col="#B4DCFF")
 }
 points(dailyAll$doy, dailyAll$SWC, type="l", lwd=lw) 
 axis(1, xseq, cex.axis=cax )
@@ -156,7 +173,7 @@ mtext(expression(paste("( m"^3, "m"^-3,")")), side=2, line=lly2, cex=cll)
 mtext("Precipitation", side=4, line=lly2, cex=cll)
 mtext("(mm)", side=4, line=lly1, cex=cll)
 legend(200,0.5, c("soil moisture", "precipitation"), lwd=c(lw,NA),
-       col=c("black","#C6DAF4"),pch=c(NA,15), cex=lgc, bty="n")
+       col=c("black","#B4DCFF"),pch=c(NA,15), cex=lgc, bty="n")
 
 
 par(mai=c(0.1,0.1,0.1,0.1))
@@ -164,7 +181,7 @@ plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ",
      ylab=" ", xlim=c(xl,xh), ylim=c(yl2,yh2))
 
 points(dailyAll$doy, dailyAll$maxVPD, type="l", lwd=lw)   
-points(dailyAll$doy, tempScale, type="l", lwd=lw, col="tomato3")  
+points(dailyAll$doy, tempScale, type="l", lwd=lw, col="#F0C23E")  
 
 axis(1, xseq, cex.axis=cax )
 axis(2, y2seq, cex.axis=cax, las=2 )
@@ -174,8 +191,8 @@ mtext("Maximum VPD", side=2, line=lly1, cex=cll)
 mtext("(KPa)", side=2, line=lly2, cex=cll)
 mtext("Air temperature", side=4, line=lly2, cex=cll)
 mtext("(C)", side=4, line=lly1, cex=cll)
-legend(200,0.8, c("soil moisture", "precipitation"), lwd=c(lw,lw),
-       col=c("black","tomato3"), cex=lgc, bty="n")
+legend(200,0.8, c("VPD", "air T"), lwd=c(lw,lw),
+       col=c("black","#F0C23E"), cex=lgc, bty="n")
 
 
 par(mai=c(0.1,0.1,0.1,0.1))
@@ -185,22 +202,24 @@ plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ",
 
 
 
-points(hemDay$doy, hemDay$L.day.m2, pch=19, col=hemcol, cex=cpt)
-arrows(hemDay$doy,hemDay$L.day.m2+hemDay$se.L.m2.day,
-       hemDay$doy,hemDay$L.day.m2-hemDay$se.L.m2.day,code=0)
+points(hemDay$doy, hemDay$El_day, pch=19, col=hemcol, cex=cpt)
+arrows(hemDay$doy,hemDay$El_day+hemDay$El_se,
+       hemDay$doy,hemDay$El_day-hemDay$El_se,code=0)
+
 axis(1, xseq, cex.axis=cax )
 axis(2, y3seq,  cex.axis=cax, las=2 )
 mtext("Daily transpiration", side=2, line=lly1, cex=cll)
 mtext(expression(paste("(L m"^-2, "day"^-1, ")")), side=2, line=lly2, cex=cll)
-
+legend(200,0.12, c("hemlock"), pch=19,
+       col=c(hemcol), cex=lgc, bty="n")
 par(mai=c(0.1,0.1,0.1,0.1))
 
 plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
      ylab=" ", xlim=c(xl,xh), ylim=c(yl4,yh4))
 
-points(bassDay$doy, bassDay$L.day.m2,pch=19, col=basscol, cex=cpt)
-arrows(bassDay$doy,bassDay$L.day.m2+bassDay$se.L.m2.day,
-       bassDay$doy,bassDay$L.day.m2-bassDay$se.L.m2.day,code=0)
+points(bassDay$doy, bassDay$El_day,pch=19, col=basscol, cex=cpt)
+arrows(bassDay$doy,bassDay$El_day+bassDay$El_se,
+       bassDay$doy,bassDay$El_day-bassDay$El_se,code=0)
 
 
 axis(1, xseq, cex.axis=cax )
@@ -208,4 +227,7 @@ axis(2, y4seq,  cex.axis=cax, las=2 )
 mtext("Day of year", side=1, line=llx, cex=cll)
 mtext("Daily transpiration", side=2, line=lly1, cex=cll)
 mtext(expression(paste("(L m"^-2, "day"^-1, ")")), side=2, line=lly2, cex=cll)
+legend(200,0.12, c("basswood"), pch=19,
+       col=c(basscol), cex=lgc, bty="n")
+
 dev.off()
