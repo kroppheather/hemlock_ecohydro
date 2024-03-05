@@ -563,7 +563,7 @@ sapflow.hour <- tree.hour %>%
   group_by(doy, hour1, species) %>%
   summarise(Js = mean(Jst, na.rm=TRUE),
             sd_Js = sd(Jst, na.rm=TRUE),
-            n_Js = length(na.omit(Jst)),
+            n_Js = length(na.omit(Jst)), 
             El = mean(Elt, na.rm=TRUE),
             sd_El = sd(Elt, na.rm=TRUE),
             El_hr = mean(El.hrtt, na.rm=TRUE),
@@ -571,6 +571,26 @@ sapflow.hour <- tree.hour %>%
   filter(n_Js >= 3) 
 
 
+# max js
+sapflow.max.tree <- tree.hour %>%
+  group_by(species, Tree.Number, doy) %>%
+  summarise(maxJst= max(Jst, na.rm=TRUE),
+            n_t= length(na.omit(Jst)))
+
+
+sapflow.max <- sapflow.max.tree %>%
+  filter(n_t >= 22) %>%
+  group_by(species, doy) %>%
+  summarise(max_Js = mean(maxJst),
+            sd_mJs = sd(maxJst),
+            n_max= n()) %>%
+  filter(n_max >=3)
+
+sapflow.max$se_mJs = sapflow.max$sd_mJs/sqrt(sapflow.max$n_max)
+
+ggplot(sapflow.max, aes(doy, max_Js, color=species))+
+         geom_point()
+  
 # daily totals
 
 # covert JS to hour to sum to sapflow to day
@@ -600,6 +620,6 @@ ggplot(sapflow.hour%>%filter(doy==241 ), aes(hour1, Js, color=species))+
   geom_line()
 
 
-rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript", "tree.hour", "sensors")))
+rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript", "tree.hour", "sensors", "sapflow.max")))
 
    

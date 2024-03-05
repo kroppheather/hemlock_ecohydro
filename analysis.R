@@ -57,6 +57,11 @@ T_L_day <- left_join(Tc.L.day, dailyPrecip, by="doy")
 T_L_day$El_se <- T_L_day$sd_El/sqrt(T_L_day$n_plant)
 # note that L per day works out to mm/day 
 
+# filter T_L_day to avoid measurments during very low vPD days in accordance with
+# Ewers & Clearwater
+T_L_day <- T_L_day %>%
+  filter(aveVPD >0.6)
+
 # separate out by tree genus
 hemDay <- T_L_day %>%
   filter(species == "hemlock")
@@ -87,10 +92,6 @@ plot(corTest$aveVPD, corTest$ave_SW)
 cor(corTest$aveVPD, corTest$ave_SW)
 
 
-VPDmodH <- lm(HemL_day$El_day ~ HemL_day$aveVPD)
-summary(VPDmodH)
-VPDmodB <- lm(BassL_day$El_day ~ BassL_day$aveVPD)
-summary(VPDmodB)
 
 
 ############## Figures ------
@@ -102,8 +103,9 @@ hemcolt <- "#3E9AF099"
 ############## Figure 1 daily data ------
 
 
-hd <- 2
+hd <- 2.5
 wd <- 4.5
+
 xl <- 168
 xh <- 250
 xseq <- seq(160,260,by=10)
@@ -112,7 +114,7 @@ y1bseq <- seq(0, 35, by=5)
 y2seq <- seq(0,2.4,by=0.2)
 y2bseq <- seq(10,30, by=5)
 y3seq <- seq(0,0.12,by=0.02)
-y4seq <- seq(0,0.12,by=0.02)
+
 yl1 <- 0
 yh1 <- 0.5
 
@@ -122,8 +124,7 @@ yh2 <- 2.5
 yl3 <- 0
 yh3 <- 0.12
 
-yl4 <- 0
-yh4 <- 0.12
+
 
 #axis tick label size
 cax <- 1.75
@@ -153,7 +154,7 @@ png(paste0(dirFig, "/fig_1_met_t.png"), width=7, height=9,
     units="in", res=500 )
 
 
-layout(matrix(seq(1,4),ncol=1, byrow=TRUE), width=lcm(rep(wd*2.54,1)),height=lcm(rep(hd*2.54,4)))
+layout(matrix(seq(1,3),ncol=1, byrow=TRUE), width=lcm(rep(wd*2.54,1)),height=lcm(rep(hd*2.54,3)))
 
 par(mai=c(0.1,0.1,0.1,0.1))
 plot(c(0,1),c(0,1), type="n", axes=FALSE, xlab= " ", 
@@ -202,32 +203,34 @@ plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ",
 
 
 
-points(hemDay$doy, hemDay$El_day, pch=19, col=hemcol, cex=cpt)
+points(hemDay$doy, hemDay$El_day, pch=19, col=hemcolt, cex=cpt)
 arrows(hemDay$doy,hemDay$El_day+hemDay$El_se,
-       hemDay$doy,hemDay$El_day-hemDay$El_se,code=0)
+       hemDay$doy,hemDay$El_day-hemDay$El_se,code=0, col=hemcolt)
+points(bassDay$doy, bassDay$El_day,pch=19, col=basscolt, cex=cpt)
+arrows(bassDay$doy,bassDay$El_day+bassDay$El_se,
+       bassDay$doy,bassDay$El_day-bassDay$El_se,code=0, col=basscolt)
 
 axis(1, xseq, cex.axis=cax )
 axis(2, y3seq,  cex.axis=cax, las=2 )
 mtext("Daily transpiration", side=2, line=lly1, cex=cll)
 mtext(expression(paste("(L m"^-2, "day"^-1, ")")), side=2, line=lly2, cex=cll)
-legend(200,0.12, c("hemlock"), pch=19,
-       col=c(hemcol), cex=lgc, bty="n")
-par(mai=c(0.1,0.1,0.1,0.1))
-
-plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
-     ylab=" ", xlim=c(xl,xh), ylim=c(yl4,yh4))
-
-points(bassDay$doy, bassDay$El_day,pch=19, col=basscol, cex=cpt)
-arrows(bassDay$doy,bassDay$El_day+bassDay$El_se,
-       bassDay$doy,bassDay$El_day-bassDay$El_se,code=0)
-
-
-axis(1, xseq, cex.axis=cax )
-axis(2, y4seq,  cex.axis=cax, las=2 )
+legend(200,0.12, c("hemlock", "basswood"), pch=19,
+       col=c(hemcolt, basscolt), cex=lgc, bty="n")
 mtext("Day of year", side=1, line=llx, cex=cll)
-mtext("Daily transpiration", side=2, line=lly1, cex=cll)
-mtext(expression(paste("(L m"^-2, "day"^-1, ")")), side=2, line=lly2, cex=cll)
-legend(200,0.12, c("basswood"), pch=19,
-       col=c(basscol), cex=lgc, bty="n")
 
 dev.off()
+
+############## Figure 2 daily max Js ------
+
+
+
+hd <- 2
+wd <- 4.5
+xl <- 168
+xh <- 250
+xseq <- seq(160,260,by=10)
+y1seq <- seq(0,0.5,by=0.1)
+yl1 <- 0
+yh1 <- 0.5
+
+
