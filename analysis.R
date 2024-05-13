@@ -60,7 +60,22 @@ T_L_day$El_se <- T_L_day$sd_El/sqrt(T_L_day$n_plant)
 # filter T_L_day to avoid measurments during very low vPD days in accordance with
 # Ewers & Clearwater
 T_L_day <- T_L_day %>%
-  filter(aveVPD >0.6)
+  filter(maxVPD >0.6 & Prec < 2)
+
+ggplot(T_L_day, aes(maxVPD, El_day, color=species))+
+  geom_point()
+
+ggplot(T_L_day, aes(doy, El_day, color=species))+
+  geom_point()
+
+ggplot(T_L_day, aes(ave_SW, El_day, color=species))+
+  geom_point()
+
+ggplot(T_L_day, aes(SWC, El_day, color=species))+
+  geom_point()
+
+ggplot(T_L_day, aes(s_temp, El_day, color=species))+
+  geom_point()
 
 # separate out by tree genus
 hemDay <- T_L_day %>%
@@ -69,9 +84,30 @@ hemDay <- T_L_day %>%
 bassDay <- T_L_day %>%
   filter(species == "basswood")
 
+
+# regressions
+hemLM <- lm(hemDay$El_day ~ hemDay$maxVPD + hemDay$ave_SW + hemDay$SWC)
+summary(hemLM)
+qqnorm(hemLM$residuals)
+qqline(hemLM$residuals)
+shapiro.test(hemLM$residuals)
+plot(hemLM$fitted.values, hemLM$residuals)
+abline(h=0)
+
+bassLM <- lm(bassDay$El_day ~ bassDay$maxVPD + bassDay$ave_SW + bassDay$SWC)
+summary(bassLM)
+qqnorm(bassLM$residuals)
+qqline(bassLM$residuals)
+shapiro.test(bassLM$residuals)
+plot(bassLM$fitted.values, bassLM$residuals)
+abline(h=0)
+
 # met only
 dailyAll1 <- left_join(soilDaily,dailyPrecip, by="doy")
 dailyAll <- left_join(weatherDaily,dailyAll1, by="doy")
+
+
+
 
 
 #### check correlations  ----
@@ -84,12 +120,8 @@ plot(corTest$s_temp, corTest$weekPr)
 cor(corTest$s_temp, corTest$weekPr)
 plot(corTest$s_temp, corTest$SWC)
 cor(corTest$s_temp, corTest$SWC)
-plot(corTest$aveVPD, corTest$max_SW)
-cor(corTest$aveVPD, corTest$max_SW)
-plot(corTest$aveVPD, corTest$ave_SW)
-cor(corTest$aveVPD, corTest$ave_SW)
-plot(corTest$aveVPD, corTest$ave_SW)
-cor(corTest$aveVPD, corTest$ave_SW)
+plot(corTest$maxVPD, corTest$ave_SW)
+cor(corTest$maxVPD, corTest$ave_SW)
 
 
 

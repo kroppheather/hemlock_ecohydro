@@ -1,6 +1,7 @@
 library(lubridate)
 library(ggplot2)
 library(dplyr)
+library(zoo)
 
 #### data directory ----
 # parent directory
@@ -512,37 +513,14 @@ ggplot(sapFlow, aes(DD,Js*1000, color=Tree.Type))+
 
 sapFlow$El <- sapFlow$Js *(sapFlow$sap.aream2/sapFlow$LA.m2)
 
-
-ggplot(sapFlow, aes(DD,El, color=Tree.Type))+
-  geom_point()
-
-ggplot(sapFlow %>% filter(Tree.Type=="Hemlock"& doy >=220 & doy <= 230), aes(DD,El, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
-
-ggplot(sapFlow %>% filter(Tree.Type=="Hemlock"& doy >=180 & doy <= 182), aes(DD,El, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
-
-ggplot(sapFlow %>% filter(Tree.Type=="Basswood"& doy >=180 & doy <= 190), aes(DD,El, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
-
-# sap flow per hour
-sapFlow$El.hr <- sapFlow$El*60*60
-
-
 sapFlow$hour1 <- floor(sapFlow$hour)
 
 sapFlowNN <- sapFlow %>%
   filter(is.na(El) == FALSE)
-
 sapFlowNN$species <- tolower(sapFlowNN$Tree.Type)
-ggplot(sapFlow, aes(DD, Js, color=Tree.Number))+
-  geom_point()
+# sap flow per hour
+sapFlowNN$El.hr <- sapFlowNN$El*60*60
 
-##############################
-#### Summary tables    ----
 # hourly table
 
 tree.hour <- sapFlowNN %>%
@@ -553,12 +531,119 @@ tree.hour <- sapFlowNN %>%
             sd.Elt = sd(El, na.rm=TRUE),
             El.hrtt = mean(El.hr, na.rm=TRUE),
             sd.Elhr = sd(El.hr, na.rm=TRUE),
-            n_t= length(na.omit(Js)))
+            n_t= length(na.omit(Js))) %>%
+            filter(n_t >=3)
+
+
+# gap fill separate by species
+
+
+hemlock_hour <- tree.hour %>%
+  filter(species == "hemlock")
+
+basswood_hour <- tree.hour %>%
+  filter(species == "basswood")
+
+doyAllHemlock <- data.frame(doy=rep(rep(seq(167,250), each=24),
+                                    times=length(unique(hemlock_hour$Tree.Number))),
+                        hour=rep(rep(seq(0,23), times= length(seq(167,250))),
+                                 times=length(unique(hemlock_hour$Tree.Number))),
+                        Tree.Number= rep(unique(hemlock_hour$Tree.Number),
+                                    each=length(seq(167,250))*24))
+
+doyAllBasswood <- data.frame(doy=rep(rep(seq(167,250), each=24),
+                                    times=length(unique(basswood_hour$Tree.Number))),
+                            hour=rep(rep(seq(0,23), times= length(seq(167,250))),
+                                     times=length(unique(basswood_hour$Tree.Number))),
+                            Tree.Number= rep(unique(basswood_hour$Tree.Number),
+                                             each=length(seq(167,250))*24))
+
+
+basswoodALL <- left_join(doyAllBasswood, basswood_hour,  by=c("doy","hour"="hour1", "Tree.Number"))
+hemlockALL <- left_join(doyAllHemlock, hemlock_hour,  by=c("doy","hour"="hour1", "Tree.Number"))
+
+hemlockALL$date <- ymd_hm(paste0(as.Date(hemlockALL$doy, origin="2021-12-31"),
+                                   " ", hemlockALL$hour,":00"))
+
+basswoodALL$date <- ymd_hm(paste0(as.Date(basswoodALL$doy, origin="2021-12-31"),
+                                 " ", basswoodALL$hour,":00"))
+
+
+sensorB <- unique(basswoodALL$Tree.Number)
+bass_TreeL <- list()
+bass_gapZ <- list()
+bass_gap <- list()
+bass_gapDF <- list()
+for(i in 1:length(sensorB)){
+  bass_TreeL[[i]] <- basswoodALL %>% filter(Tree.Number == sensorB[i])
+  bass_gapZ[[i]] <- zoo(bass_TreeL[[i]]$Elt, bass_TreeL[[i]]$date)
+  bass_gap[[i]] <- na.approx(bass_gapZ[[i]], maxgap=3, na.rm=FALSE) 
+  bass_gapDF[[i]] <- fortify(bass_gap[[i]])
+  bass_gapDF[[i]]$Tree.Number <- rep(sensorB[i], nrow(bass_gapDF[[i]]))
+  
+}
+
+
+bass_gapf <- do.call("rbind", bass_gapDF)
+bass_gapf$doy <- yday(bass_gapf$Index)
+bass_gapf$hour <- hour(bass_gapf$Index)
+names(bass_gapf) <- c("date", "Elt","Tree.Number","doy","hour")
+# add sensor info back in
+Nsensors <- sensors %>% filter(Direction == "N")
+
+bass_gapf <- left_join(bass_gapf, Nsensors, by=c("Tree.Number"))
+
+bass_gapf <- do.call("rbind", bass_gapDF)
+bass_gapf$doy <- yday(bass_gapf$Index)
+bass_gapf$hour <- hour(bass_gapf$Index)
+names(bass_gapf) <- c("date", "Elt","Tree.Number","doy","hour")
+# add sensor info back in
+Nsensors <- sensors %>% filter(Direction == "N")
+
+bass_gapf <- left_join(bass_gapf, Nsensors, by=c("Tree.Number"))
+bass_gapf$species <- rep("basswood", nrow(bass_gapf))
+
+
+sensorH <- unique(hemlockALL$Tree.Number)
+hem_TreeL <- list()
+hem_gapZ <- list()
+hem_gap <- list()
+hem_gapDF <- list()
+for(i in 1:length(sensorH)){
+  hem_TreeL[[i]] <- hemlockALL %>% filter(Tree.Number == sensorH[i])
+  hem_gapZ[[i]] <- zoo(hem_TreeL[[i]]$Elt, hem_TreeL[[i]]$date)
+  hem_gap[[i]] <- na.approx(hem_gapZ[[i]], maxgap=3, na.rm=FALSE) 
+  hem_gapDF[[i]] <- fortify(hem_gap[[i]])
+  hem_gapDF[[i]]$Tree.Number <- rep(sensorH[i], nrow(hem_gapDF[[i]]))
+  
+}
+
+
+hem_gapf <- do.call("rbind", hem_gapDF)
+hem_gapf$doy <- yday(hem_gapf$Index)
+hem_gapf$hour <- hour(hem_gapf$Index)
+names(hem_gapf) <- c("date", "Elt","Tree.Number","doy","hour")
+# add sensor info back in
+
+hem_gapf <- left_join(hem_gapf, Nsensors, by=c("Tree.Number"))
+hem_gapf$species <- rep("hemlock", nrow(hem_gapf))
+
+gapf_El <-rbind(hem_gapf, bass_gapf)
+gapf_El$El.hrt <- gapf_El$Elt*60*60
+
+
+
+ggplot(sapFlow, aes(DD, Js, color=Tree.Number))+
+  geom_point()
+
+##############################
+#### Summary tables    ----
+
   
 ggplot(tree.hour, aes(doy+(hour1/24),El.hrtt, color=as.factor(Tree.Number)))+
   geom_line()
 
-# hourly averages across trees
+# hourly averages across trees with no gap filling
 sapflow.hour <- tree.hour %>%
   group_by(doy, hour1, species) %>%
   summarise(Js = mean(Jst, na.rm=TRUE),
@@ -594,11 +679,12 @@ ggplot(sapflow.max, aes(doy, max_Js, color=species))+
 # daily totals
 
 # covert JS to hour to sum to sapflow to day
-Tot.tree.L.day <- tree.hour %>%
+Tot.tree.L.day <- gapf_El %>%
   group_by(Tree.Number, doy, species) %>%
-  summarise(Tot_El_day = sum(El.hrtt, na.rm=TRUE),
-            Tot_n_day = length(na.omit(El.hrtt)))%>%
-  filter(Tot_n_day >=22)
+  summarise(Tot_El_day = sum(El.hrt, na.rm=TRUE),
+            Tot_n_day = length(na.omit(El.hrt)))%>%
+  filter(Tot_n_day ==24)
+
 # Kg m-2 leaf day day
 T.L.day <- Tot.tree.L.day %>%
   group_by( doy, species) %>%
