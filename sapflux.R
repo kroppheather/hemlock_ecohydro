@@ -342,8 +342,7 @@ dtCalc <- left_join(dtCalct1 , sensors, by=c("sensor"="Sensor.Number"))
 dtCalc$dTCor <- (dtCalc$dT - (dtCalc$b * dtCalc$maxDT))/dtCalc$a
 # since this is a rolling average assume any value above the max
 # is equivalent to the maximum temp and set flow to zero
-dtCalc$K <- ifelse(dtCalc$dTCor > dtCalc$maxDT, 0,
-  (dtCalc$maxDT - dtCalc$dTCor)/dtCalc$dTCor)
+dtCalc$K <- (dtCalc$maxDT - dtCalc$dTCor)/dtCalc$dTCor
 
 ggplot(dtCalc %>% filter(sensor == 15), aes(DD, K))+
   geom_point()
