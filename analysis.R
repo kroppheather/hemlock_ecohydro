@@ -55,14 +55,16 @@ dailyPrecip$weekPr <- weeklyPrecip
 
 T_L_day <- left_join(Tc.L.day, dailyPrecip, by="doy")
 T_L_day$El_se <- T_L_day$sd_El/sqrt(T_L_day$n_plant)
-# note that L per day works out to mm/day 
+
+
+#L or Kg per day == mm day for El
 
 # filter T_L_day to avoid measurments during very low vPD days in accordance with
 # Ewers & Clearwater
 T_L_day <- T_L_day %>%
   filter(maxVPD >0.6 & Prec < 2)
 
-ggplot(T_L_day, aes(maxVPD, El_day, color=species))+
+ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
   geom_point()
 
 ggplot(T_L_day, aes(doy, El_day, color=species))+

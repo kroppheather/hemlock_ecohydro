@@ -12,7 +12,7 @@ dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu
 
 # sap flow
 sapRaw <- read.csv(paste0(dirData[dirUser],"/sapflow/09_08_2022/Sapflow_TableDT.dat"),
-                  header=FALSE,skip=4,na.strings=c("NAN"))
+                   header=FALSE,skip=4,na.strings=c("NAN"))
 
 # weather station
 weather <- read.csv(paste0(dirData[dirUser], "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
@@ -21,13 +21,13 @@ weather <- read.csv(paste0(dirData[dirUser], "/weather/z6-10463(z6-10463)-169445
 
 
 colnames(weather) <- c("Date","SolRad","Precip","LightningAct","LightningDist","WindDir","WindSpeed",
-                          "GustSpeed","AirTemp","VaporPr","AtmosPr","XLevel","YLevel","MaxPrecip",
-                          "SensorTemp","VPD","BatPct","BatVolt","RefPr","LogTemp")
+                       "GustSpeed","AirTemp","VaporPr","AtmosPr","XLevel","YLevel","MaxPrecip",
+                       "SensorTemp","VPD","BatPct","BatVolt","RefPr","LogTemp")
 
 
 
 weatherInfo <- read.csv(paste0(dirData[dirUser], "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
-                         nrows=3, header=FALSE)
+                        nrows=3, header=FALSE)
 # allometry
 basswoodmeas <- read.csv(paste0(dirData[dirUser],"/allometry/basswoodmeas.csv"))
 hemlockmeas <- read.csv(paste0(dirData[dirUser],"/allometry/hemlockmeas.csv"))
@@ -109,15 +109,15 @@ LA.m2 <- numeric()
 # calculations result in m2
 for(i in 1:nrow(sensors)){
   if(sensors$Tree.Type[i] == "Basswood"){
-
-  biomass.kg = exp(-4.25 + 1.79*(log(sensors$DBH.cm[i])))
-
-
-  #conversion from Ewers et al SLA averaged over two years (in m2/kg)
-  LA.m2[i] <- ((34.8+32.4)/2)*biomass.kg
+    
+    biomass.kg = exp(-4.25 + 1.79*(log(sensors$DBH.cm[i])))
+    
+    
+    #conversion from Ewers et al SLA averaged over two years (in m2/kg)
+    LA.m2[i] <- ((34.8+32.4)/2)*biomass.kg
   }else{
-  #leaf area in m2 for hemlock, from Ford and Vose 2007
-  LA.m2[i] <- exp((1.542*log(sensors$DBH.cm[i]))-0.274)
+    #leaf area in m2 for hemlock, from Ford and Vose 2007
+    LA.m2[i] <- exp((1.542*log(sensors$DBH.cm[i]))-0.274)
   }
 }
 sensors$LA.m2 <- LA.m2
@@ -313,7 +313,7 @@ ggplot( dtAll %>%
 
 # calculate rolling average. Create a continuous day df
 dayAllDF <- data.frame(sensor = rep(unique(maxJoin$sensor), each=length(seq(166,250))),
-                         doy = rep(seq(166,250), times=length(unique(maxJoin$sensor))))
+                       doy = rep(seq(166,250), times=length(unique(maxJoin$sensor))))
 
 maxAllDays <- left_join(dayAllDF, maxJoin, by=c("sensor", "doy"))
 
@@ -340,9 +340,10 @@ dtCalc <- left_join(dtCalct1 , sensors, by=c("sensor"="Sensor.Number"))
 # velo is refered to  as Js in Ewers it is m3 of water per m-2 of sap flow per s
 # this can reduce in dimension to m per s
 dtCalc$dTCor <- (dtCalc$dT - (dtCalc$b * dtCalc$maxDT))/dtCalc$a
-# since this is a rolling average assume any value above the max
+# any corrected deviation above max temp 
 # is equivalent to the maximum temp and set flow to zero
-dtCalc$K <- (dtCalc$maxDT - dtCalc$dTCor)/dtCalc$dTCor
+dtCalc$K <- ifelse(dtCalc$dTCor > dtCalc$maxDT, 0,
+                   (dtCalc$maxDT - dtCalc$dTCor)/dtCalc$dTCor)
 
 ggplot(dtCalc %>% filter(sensor == 15), aes(DD, K))+
   geom_point()
@@ -358,8 +359,8 @@ hemlockT <- dtCalc[dtCalc$Tree.Type == "Hemlock",]
 basswoodT <- dtCalc[dtCalc$Tree.Type == "Basswood",]
 
 ggplot(hemlockT, aes(DD, velo, color=as.factor(sensor)))+
-         geom_point()+
-         geom_line()
+  geom_point()+
+  geom_line()
 
 ggplot(basswoodT, aes(DD, velo, color=as.factor(sensor)))+
   geom_point()+
@@ -531,7 +532,7 @@ tree.hour <- sapFlowNN %>%
             El.hrtt = mean(El.hr, na.rm=TRUE),
             sd.Elhr = sd(El.hr, na.rm=TRUE),
             n_t= length(na.omit(Js))) %>%
-            filter(n_t >=3)
+  filter(n_t >=3)
 
 
 # gap fill separate by species
@@ -545,27 +546,27 @@ basswood_hour <- tree.hour %>%
 
 doyAllHemlock <- data.frame(doy=rep(rep(seq(167,250), each=24),
                                     times=length(unique(hemlock_hour$Tree.Number))),
-                        hour=rep(rep(seq(0,23), times= length(seq(167,250))),
-                                 times=length(unique(hemlock_hour$Tree.Number))),
-                        Tree.Number= rep(unique(hemlock_hour$Tree.Number),
-                                    each=length(seq(167,250))*24))
+                            hour=rep(rep(seq(0,23), times= length(seq(167,250))),
+                                     times=length(unique(hemlock_hour$Tree.Number))),
+                            Tree.Number= rep(unique(hemlock_hour$Tree.Number),
+                                             each=length(seq(167,250))*24))
 
 doyAllBasswood <- data.frame(doy=rep(rep(seq(167,250), each=24),
-                                    times=length(unique(basswood_hour$Tree.Number))),
-                            hour=rep(rep(seq(0,23), times= length(seq(167,250))),
                                      times=length(unique(basswood_hour$Tree.Number))),
-                            Tree.Number= rep(unique(basswood_hour$Tree.Number),
-                                             each=length(seq(167,250))*24))
+                             hour=rep(rep(seq(0,23), times= length(seq(167,250))),
+                                      times=length(unique(basswood_hour$Tree.Number))),
+                             Tree.Number= rep(unique(basswood_hour$Tree.Number),
+                                              each=length(seq(167,250))*24))
 
 
 basswoodALL <- left_join(doyAllBasswood, basswood_hour,  by=c("doy","hour"="hour1", "Tree.Number"))
 hemlockALL <- left_join(doyAllHemlock, hemlock_hour,  by=c("doy","hour"="hour1", "Tree.Number"))
 
 hemlockALL$date <- ymd_hm(paste0(as.Date(hemlockALL$doy, origin="2021-12-31"),
-                                   " ", hemlockALL$hour,":00"))
+                                 " ", hemlockALL$hour,":00"))
 
 basswoodALL$date <- ymd_hm(paste0(as.Date(basswoodALL$doy, origin="2021-12-31"),
-                                 " ", basswoodALL$hour,":00"))
+                                  " ", basswoodALL$hour,":00"))
 
 
 sensorB <- unique(basswoodALL$Tree.Number)
@@ -638,7 +639,7 @@ ggplot(sapFlow, aes(DD, Js, color=Tree.Number))+
 ##############################
 #### Summary tables    ----
 
-  
+
 ggplot(tree.hour, aes(doy+(hour1/24),El.hrtt, color=as.factor(Tree.Number)))+
   geom_line()
 
@@ -673,8 +674,8 @@ sapflow.max <- sapflow.max.tree %>%
 sapflow.max$se_mJs = sapflow.max$sd_mJs/sqrt(sapflow.max$n_max)
 
 ggplot(sapflow.max, aes(doy, max_Js, color=species))+
-         geom_point()
-  
+  geom_point()
+
 # daily totals
 
 # covert JS to hour to sum to sapflow to day
@@ -707,4 +708,3 @@ ggplot(sapflow.hour%>%filter(doy==241 ), aes(hour1, Js, color=species))+
 
 rm(list=setdiff(ls(), c("T.L.day","sapflow.hour", "Tot.tree.L.day", "dirScript", "tree.hour", "sensors", "sapflow.max")))
 
-   
