@@ -64,10 +64,10 @@ T_L_day$El_se <- T_L_day$sd_El/sqrt(T_L_day$n_plant)
 T_L_day <- T_L_day %>%
   filter(maxVPD >0.6 & Prec < 2)
 
-ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
+ggplot(T_L_day, aes(maxVPD, El_day, color=species))+
   geom_point()
 
-ggplot(T_L_day, aes(doy, El_day, color=species))+
+pggplot(T_L_day, aes(doy, El_day, color=species))+
   geom_point()
 
 ggplot(T_L_day, aes(ave_SW, El_day, color=species))+
@@ -78,7 +78,9 @@ ggplot(T_L_day, aes(SWC, El_day, color=species))+
 
 ggplot(T_L_day, aes(s_temp, El_day, color=species))+
   geom_point()
-
+T_L_day$ave_SWCent <- T_L_day$ave_SW-200
+T_L_day$SWCCent <- T_L_day$SWC-0.25
+T_L_day$maxVPDCent <- T_L_day$maxVPD-1.5
 # separate out by tree genus
 hemDay <- T_L_day %>%
   filter(species == "hemlock")
@@ -87,8 +89,9 @@ bassDay <- T_L_day %>%
   filter(species == "basswood")
 
 
-# regressions
-hemLM <- lm(hemDay$El_day ~ hemDay$maxVPD + hemDay$ave_SW + hemDay$SWC)
+
+# daily regressions
+hemLM <- lm(hemDay$El_day ~ hemDay$maxVPDCent + hemDay$ave_SWCent + hemDay$SWCCent)
 summary(hemLM)
 qqnorm(hemLM$residuals)
 qqline(hemLM$residuals)
@@ -96,7 +99,7 @@ shapiro.test(hemLM$residuals)
 plot(hemLM$fitted.values, hemLM$residuals)
 abline(h=0)
 
-bassLM <- lm(bassDay$El_day ~ bassDay$maxVPD + bassDay$ave_SW + bassDay$SWC)
+bassLM <- lm(bassDay$El_day ~ bassDay$maxVPDCent + bassDay$ave_SWCent + bassDay$SWCCent)
 summary(bassLM)
 qqnorm(bassLM$residuals)
 qqline(bassLM$residuals)
@@ -109,26 +112,68 @@ dailyAll1 <- left_join(soilDaily,dailyPrecip, by="doy")
 dailyAll <- left_join(weatherDaily,dailyAll1, by="doy")
 
 
-# look at hourly patterns
+# look at hourly patterns ----
 # join weather hourly and sapflow hourly
 
 
 sapHour <- left_join(sapflow.hour, weatherHourly,  by=c("doy", "hour1"="hour"))
 sapHourA <- sapHour %>%
-  filter(VPD_hr > 0.6 & Precip < 1 & hour1 >= 7 & hour1 <= 19)
+  filter(VPD_hr > 0.1 & Precip < 1 & hour1 >= 8 & hour1 <= 19)
 
+daysFull <- sapHourA %>%
+  group_by(doy, species) %>%
+  summarise(n_count = n()) %>%
+  filter(n_count > 11)
 
-ggplot(sapHourA %>% filter(doy == 170), aes(VPD_hr, Js, color=species))+
-  geom_point()+
-  geom_line()
+# days with both
+daysBoth <- daysFull %>%
+  group_by(doy) %>%
+  summarise(n_spec=n()) %>%
+  filter(n_spec == 2)
 
-ggplot(sapHourA %>% filter(doy == 245), aes(VPD_hr, Js, color=species))+
-  geom_point()+
-  geom_line()
+daysFull <- inner_join(daysFull, daysBoth, by="doy")
+
+sapH <- inner_join(sapHourA, daysFull, by=c("doy","species"))
+sapH$Js_g <- sapH$Js*1000
+
+sapH <- left_join(sapH, soilDaily, by="doy")
+
+sapH$swcI <- ifelse(sapH$SWC <= 0.25, 1,
+                    ifelse(sapH$SWC > 0.25 & sapH$SWC <=0.35, 2,
+                    ifelse(sapH$SWC > 0.35 , 3,NA)))
+
+sapH$swcI <- ifelse(sapH$SWC <= 0.25, 1,
+                    ifelse(sapH$SWC > 0.25 & sapH$SWC <=0.35, 2,
+                           ifelse(sapH$SWC > 0.35 , 3,NA)))
+range(soilDaily$SWC)
+
+ggplot(sapH %>% filter(species == "hemlock"), aes(VPD_hr, Js, color=as.factor(swcI)))+
+  geom_point()
+
+ggplot(sapH %>% filter(species == "hemlock"), aes(S_Rad, Js, color=as.factor(swcI)))+
+  geom_point()
+
+ggplot(sapH %>% filter(species == "basswood"), aes(VPD_hr, Js, color=as.factor(swcI)))+
+  geom_point()
+
+ggplot(sapH %>% filter(species == "basswood"), aes(S_Rad, Js, color=as.factor(swcI)))+
+  geom_point()
 
 ggplot(sapHourA, aes(VPD_hr, Js, color=species))+
   geom_point()
 
+hemH <- sapH %>% filter(species == "hemlock")
+
+ggplot(hemH, aes(VPD_hr, Js, color=doy))+
+  geom_point()
+
+ggplot(sapHour %>% filter(doy >= 180 & doy <= 190), aes(doy+(hour1/24), Js, color=species))+
+  geom_point()+
+  geom_line()
+
+ggplot(sapHour %>% filter(doy >= 225 & doy <= 235), aes(doy+(hour1/24), Js, color=species))+
+  geom_point()+
+  geom_line()
 
 #### check correlations  ----
 corTest <- na.omit(left_join(soilDaily,dailyPrecip, by="doy"))
