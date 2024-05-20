@@ -317,17 +317,106 @@ mtext("Day of year", side=1, line=llx, cex=cll)
 
 dev.off()
 
-############## Figure 2 daily max Js ------
+############## Figure 2 bivariate patterns in EL ------
 
 
+hd <- 2.5
+wd <- 2.5
+
+
+xseq1 <- seq(0,3,by=0.5)-1.5
+xseqL1 <- seq(0,3,by=0.5)
+xl1 <- -1
+xh1 <- 1.5
+
+xseq2 <- seq(0.15,0.55,by=0.1)-0.25
+xseqL2 <- seq(0.15,0.55,by=0.1)
+xl2 <- -0.15
+xh2 <- 0.3
+
+xseq3 <- seq(0,3,by=0.5)-200
+xseqL3 <- seq(0,3,by=0.5)
+xl3 <- -1
+xh3 <- 1.5
+
+y1seq <- seq(0,0.9,by=0.1)
+yl1 <- 0
+yh1 <- 0.1
+
+
+#axis tick label size
+cax <- 1.75
+
+# plot lines width
+lw <- 1.5
+
+# line number for x axis label
+llx <- 3
+lly1 <- 6.5
+lly2 <- 4
+# size of labels
+cll <- 1.3
+# size of legend
+lgc <- 1.5
+# size of points
+cpt <- 2
+
+names(hemDay)
+names(bassDay)
+summary(hemLM)
+summary(bassLM)
+
+
+
+png(paste0(dirFig, "/fig_2_t_lm.png"), width=7, height=9,
+    units="in", res=500 )
+
+
+layout(matrix(seq(1,3),ncol=3, byrow=TRUE), width=lcm(rep(wd*2.54,3)),height=lcm(rep(hd*2.54,1)))
+
+par(mai=c(0.1,0.1,0.1,0.1))
+
+plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
+     ylab=" ", xlim=c(xl1,xh1), ylim=c(yl1,yh1))
+
+points(hemDay$maxVPDCent, hemDay$El_day, pch=19, col=hemcolt, cex=cpt)
+points(bassDay$maxVPDCent,bassDay$El_day, pch=19, col=basscolt, cex=cpt)
+
+axis(1, at=xseq1,labels=xseqL1, cex.axis=cax )
+axis(2, y1seq, cex.axis=cax, las=2 )
+mtext("Daily transpiration", side=2, line=lly1, cex=cll)
+mtext(expression(paste("(L m"^-2, "day"^-1, ")")), side=2, line=lly2, cex=cll)
+legend(200,0.12, c("hemlock", "basswood"), pch=19,
+       col=c(hemcolt, basscolt), cex=lgc, bty="n")
+mtext("Maximum daily VPD (KPA)", side=1, line=llx, cex=cll)
+
+
+par(mai=c(0.1,0.1,0.1,0.1))
+
+plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
+     ylab=" ", xlim=c(xl2,xh2), ylim=c(yl1,yh1))
+
+
+points(hemDay$SWCCent, hemDay$El_day, pch=19, col=hemcolt, cex=cpt)
+points(bassDay$SWCCent,bassDay$El_day, pch=19, col=basscolt, cex=cpt)
+
+axis(1, at=xseq2,labels=xseqL2, cex.axis=cax )
+mtext(expression(paste("Soil Water Content (m"^3, "m"^-3, ")")), side=1, line=llx, cex=cll)
+
+
+plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
+     ylab=" ", xlim=c(xl2,xh2), ylim=c(yl1,yh1))
+
+points(hemDay$ave_SWCent, hemDay$El_day, pch=19, col=hemcolt, cex=cpt)
+points(bassDay$ave_SWCent,bassDay$El_day, pch=19, col=basscolt, cex=cpt)
+
+dev.off()
+
+
+############## Figure 3 hourly Js ------
 
 hd <- 2
 wd <- 4.5
 xl <- 168
 xh <- 250
-xseq <- seq(160,260,by=10)
-y1seq <- seq(0,0.5,by=0.1)
-yl1 <- 0
-yh1 <- 0.5
-
 
