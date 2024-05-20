@@ -320,8 +320,8 @@ dev.off()
 ############## Figure 2 bivariate patterns in EL ------
 
 
-hd <- 2.5
-wd <- 2.5
+hd <- 3
+wd <- 3
 
 
 xseq1 <- seq(0,3,by=0.5)-1.5
@@ -334,12 +334,12 @@ xseqL2 <- seq(0.15,0.55,by=0.1)
 xl2 <- -0.15
 xh2 <- 0.3
 
-xseq3 <- seq(0,3,by=0.5)-200
-xseqL3 <- seq(0,3,by=0.5)
-xl3 <- -1
-xh3 <- 1.5
+xseq3 <- seq(50,350,by=50)-200
+xseqL3 <- seq(50,350,by=50)
+xl3 <- -150
+xh3 <- 150
 
-y1seq <- seq(0,0.9,by=0.1)
+y1seq <- seq(0,0.1,by=0.02)
 yl1 <- 0
 yh1 <- 0.1
 
@@ -351,7 +351,8 @@ cax <- 1.75
 lw <- 1.5
 
 # line number for x axis label
-llx <- 3
+llx <- 4
+llx2 <- 6.5
 lly1 <- 6.5
 lly2 <- 4
 # size of labels
@@ -368,7 +369,7 @@ summary(bassLM)
 
 
 
-png(paste0(dirFig, "/fig_2_t_lm.png"), width=7, height=9,
+png(paste0(dirFig, "/fig_2_t_lm.png"), width=12, height=5,
     units="in", res=500 )
 
 
@@ -388,12 +389,12 @@ mtext("Daily transpiration", side=2, line=lly1, cex=cll)
 mtext(expression(paste("(L m"^-2, "day"^-1, ")")), side=2, line=lly2, cex=cll)
 legend(200,0.12, c("hemlock", "basswood"), pch=19,
        col=c(hemcolt, basscolt), cex=lgc, bty="n")
-mtext("Maximum daily VPD (KPA)", side=1, line=llx, cex=cll)
-
+mtext("Maximum daily VPD", side=1, line=llx, cex=cll)
+mtext("(KPA)", side=1, line=llx2, cex=cll)
 
 par(mai=c(0.1,0.1,0.1,0.1))
 
-plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
+plot(c(0,1),c(0,1), type="n",axes=FALSE,   xlab= " ", 
      ylab=" ", xlim=c(xl2,xh2), ylim=c(yl1,yh1))
 
 
@@ -401,14 +402,19 @@ points(hemDay$SWCCent, hemDay$El_day, pch=19, col=hemcolt, cex=cpt)
 points(bassDay$SWCCent,bassDay$El_day, pch=19, col=basscolt, cex=cpt)
 
 axis(1, at=xseq2,labels=xseqL2, cex.axis=cax )
-mtext(expression(paste("Soil Water Content (m"^3, "m"^-3, ")")), side=1, line=llx, cex=cll)
+mtext("Soil Water Content", side=1, line=llx, cex=cll)
+mtext(expression(paste(" (m"^3, "m"^-3, ")")), side=1, line=llx2, cex=cll)
+
 
 
 plot(c(0,1),c(0,1), type="n", axes=FALSE,  xlab= " ", 
-     ylab=" ", xlim=c(xl2,xh2), ylim=c(yl1,yh1))
+     ylab=" ", xlim=c(xl3,xh3), ylim=c(yl1,yh1))
 
 points(hemDay$ave_SWCent, hemDay$El_day, pch=19, col=hemcolt, cex=cpt)
 points(bassDay$ave_SWCent,bassDay$El_day, pch=19, col=basscolt, cex=cpt)
+axis(1, at=xseq3,labels=xseqL3, cex.axis=cax )
+mtext("Average Solar Radiation", side=1, line=llx, cex=cll)
+mtext(expression(paste(" (W", "m"^-2, ")")), side=1, line=llx2, cex=cll)
 
 dev.off()
 
