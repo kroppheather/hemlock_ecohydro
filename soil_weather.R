@@ -4,7 +4,7 @@ library(lubridate)
 library(ggplot2)
 library(dplyr)
 
-dirUser <- 2
+dirUser <- 1
 
 dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro",
              "G:/My Drive/research/projects/kirkland_ecohydro")

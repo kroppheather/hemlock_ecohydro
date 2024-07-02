@@ -5,7 +5,7 @@ library(zoo)
 
 #### data directory ----
 # parent directory
-dirUser <- 2
+dirUser <- 1
 
 dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro",
              "G:/My Drive/research/projects/kirkland_ecohydro")

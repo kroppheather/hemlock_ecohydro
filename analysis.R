@@ -10,13 +10,14 @@ library(ggplot2)
 library(dplyr)
 
 
+
 #### set up directories ----
-dirUser <- 2
+dirUser <- 1
 
 dirScriptAll <- c("/Users/hkropp/Documents/GitHub/hemlock_ecohydro",
                "c:/Users/hkropp/Documents/GitHub/hemlock_ecohydro")
 
-dirScript <- dirScriptAll[2]
+dirScript <- dirScriptAll[1]
 
 #### sapflow data ----
 
@@ -29,10 +30,20 @@ source(paste0(dirScript, "/sapflux.r"))
 
 source(paste0(dirScript, "/soil_weather.r"))
 
+# read in canopy density data
+
+canopyInv <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro/HCEF forest inventory data.csv")
+
+HemCanopy <- canopyInv %>%
+  filter(Plot == "RG25")
+
 # figure directories
 
-dirFig <- "G:/My Drive/research/projects/kirkland_ecohydro/manuscript/figures"
+dirFigU <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research//projects/kirkland_ecohydro/manuscript/figures",
+  "G:/My Drive/research/projects/kirkland_ecohydro/manuscript/figures")
 
+dirFig <- dirFigU[1]
+#### calculate stand leaf area  ----
 
 #### organize daily data  ----
 TreeInfo <- unique(data.frame(species=sensors$Tree.Type,
