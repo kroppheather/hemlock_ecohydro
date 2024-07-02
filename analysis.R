@@ -18,7 +18,7 @@ dirScriptAll <- c("/Users/hkropp/Documents/GitHub/hemlock_ecohydro",
                "c:/Users/hkropp/Documents/GitHub/hemlock_ecohydro")
 
 dirScript <- dirScriptAll[1]
-
+dirData <- "/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro"
 #### sapflow data ----
 
 
@@ -36,7 +36,10 @@ canopyInv <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@ham
 
 HemCanopy <- canopyInv %>%
   filter(Plot == "RG25")
-
+# allometry
+basswoodmeas <- read.csv(paste0(dirData,"/allometry/basswoodmeas.csv"))
+hemlockmeas <- read.csv(paste0(dirData,"/allometry/hemlockmeas.csv"))
+basswoodlm <- read.csv(paste0(dirData,"/allometry/DettmannMcfarlane.csv"))
 # figure directories
 
 dirFigU <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research//projects/kirkland_ecohydro/manuscript/figures",
@@ -44,6 +47,21 @@ dirFigU <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu
 
 dirFig <- dirFigU[1]
 #### calculate stand leaf area  ----
+HemDBH <- HemCanopy %>%
+  filter(Species == "TSCA")
+HemDBH$LA_tree_m2 <- exp((1.542*log(HemDBH$DBH.cm))-0.274)
+
+HemSt_LA <- sum(HemDBH$LA_tree_m2)/ (pi*(15^2))
+
+BassDBH <- HemCanopy %>%
+  filter(Species == "TIAM")
+#basswood projected leaf area
+BassDBH$biomass_kg = exp(-4.25 + 1.79*(log(BassDBH$DBH.cm)))
+#conversion from Ewers et al SLA averaged over two years (in m2/kg)
+BassDBH$LA_tree_m2 <- ((34.8+32.4)/2)*BassDBH$biomass_kg
+
+BassSt_LA <- sum(BassDBH$LA_tree_m2)/ (pi*(15^2))
+
 
 #### organize daily data  ----
 TreeInfo <- unique(data.frame(species=sensors$Tree.Type,
