@@ -10,6 +10,21 @@ library(ggplot2)
 library(dplyr)
 
 
+#### sapflow data ----
+
+dirUser <- 1
+
+dirScriptAll <- c("/Users/hkropp/Documents/GitHub/hemlock_ecohydro",
+                  "c:/Users/hkropp/Documents/GitHub/hemlock_ecohydro")
+
+dirScript <- dirScriptAll[1]
+source(paste0(dirScript, "/sapflux.r"))
+
+#### soil and weather data ----
+# soilDaily and soilHourly give soil moisture and temperature
+# weatherDaily and weatherHourly have hourly and daily stats
+
+source(paste0(dirScript, "/soil_weather.r"))
 
 #### set up directories ----
 dirUser <- 1
@@ -19,16 +34,6 @@ dirScriptAll <- c("/Users/hkropp/Documents/GitHub/hemlock_ecohydro",
 
 dirScript <- dirScriptAll[1]
 dirData <- "/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro"
-#### sapflow data ----
-
-
-source(paste0(dirScript, "/sapflux.r"))
-
-#### soil and weather data ----
-# soilDaily and soilHourly give soil moisture and temperature
-# weatherDaily and weatherHourly have hourly and daily stats
-
-source(paste0(dirScript, "/soil_weather.r"))
 
 # read in canopy density data
 
@@ -46,11 +51,13 @@ dirFigU <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu
   "G:/My Drive/research/projects/kirkland_ecohydro/manuscript/figures")
 
 dirFig <- dirFigU[1]
-#### calculate stand leaf area  ----
+#### calculate stand leaf and sapwood area  ----
 HemDBH <- HemCanopy %>%
   filter(Species == "TSCA")
 HemDBH$LA_tree_m2 <- exp((1.542*log(HemDBH$DBH.cm))-0.274)
-
+HemDBH$SA_cm2 <- exp(-1.192 + (2.010*log(HemDBH$DBH.cm)))
+HemDBH$sap.m2 <- 0.0001*HemDBH$SA_cm2
+HemSt_SA <- sum(HemDBH$sap.m2)/ (pi*(15^2))
 HemSt_LA <- sum(HemDBH$LA_tree_m2)/ (pi*(15^2))
 
 BassDBH <- HemCanopy %>%
@@ -60,7 +67,20 @@ BassDBH$biomass_kg = exp(-4.25 + 1.79*(log(BassDBH$DBH.cm)))
 #conversion from Ewers et al SLA averaged over two years (in m2/kg)
 BassDBH$LA_tree_m2 <- ((34.8+32.4)/2)*BassDBH$biomass_kg
 
+# calculate sapwood area for each tree
+
+BassDBH$bark <- (BassDBH$DBH.cm*0.0326) - 0.1708
+BassDBH$sd.cm <- -0.7783 + (0.24546*BassDBH$DBH.cm)
+
+BassDBH$Htwd <- BassDBH$DBH.cm  - (BassDBH$sd.cm*2) - (BassDBH$bark*2)
+
+#calculate sapwood area
+
+BassDBH$sap.cm2 <- (pi*(((BassDBH$sd.cm) +(BassDBH$Htwd /2))^2))-(pi*((BassDBH$Htwd /2)^2))
+BassDBH$sap.m2 <- 0.0001*BassDBH$sap.cm2
+BassSt_SA <- sum(BassDBH$sap.m2)/ (pi*(15^2))
 BassSt_LA <- sum(BassDBH$LA_tree_m2)/ (pi*(15^2))
+
 
 
 #### organize daily data  ----

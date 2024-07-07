@@ -14,6 +14,10 @@ dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu
 sapRaw <- read.csv(paste0(dirData[dirUser],"/sapflow/09_08_2022/Sapflow_TableDT.dat"),
                    header=FALSE,skip=4,na.strings=c("NAN"))
 
+canopyInv <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro/HCEF forest inventory data.csv")
+
+HemCanopy <- canopyInv %>%
+  filter(Plot == "RG25")
 # weather station
 weather <- read.csv(paste0(dirData[dirUser], "/weather/z6-10463(z6-10463)-1694459136/z6-10463(z6-10463)-Configuration 1-1694459136.3651896.csv"), 
                     skip=3, header=FALSE)
@@ -80,7 +84,7 @@ for(i in 1:nrow(sensors)){
     
     #calculate sapwood area
     
-    sapcalc[i] <- (pi*(((sensors$sd.cm[i]/2)+(Htwd/2))^2))-(pi*((Htwd/2)^2))
+    sapcalc[i] <- (pi*(((sensors$sd.cm[i])+(Htwd/2))^2))-(pi*((Htwd/2)^2))
     
   }else{
     # regression from Daly table
@@ -131,6 +135,40 @@ sensors$a <- ifelse(sensors$sd.cm >= 3,1,
                     sensors$sd.cm/3)
 
 sensors$b <- 1 - sensors$a
+
+
+#### calculate stand leaf and sapwood area  ----
+HemDBH <- HemCanopy %>%
+  filter(Species == "TSCA")
+HemDBH$LA_tree_m2 <- exp((1.542*log(HemDBH$DBH.cm))-0.274)
+HemDBH$SA_cm2 <- exp(-1.192 + (2.010*log(HemDBH$DBH.cm)))
+HemDBH$sap.m2 <- 0.0001*HemDBH$SA_cm2
+HemSt_SA <- sum(HemDBH$sap.m2)/ (pi*(15^2))
+HemSt_LA <- sum(HemDBH$LA_tree_m2)/ (pi*(15^2))
+
+BassDBH <- HemCanopy %>%
+  filter(Species == "TIAM")
+#basswood projected leaf area
+BassDBH$biomass_kg = exp(-4.25 + 1.79*(log(BassDBH$DBH.cm)))
+#conversion from Ewers et al SLA averaged over two years (in m2/kg)
+BassDBH$LA_tree_m2 <- ((34.8+32.4)/2)*BassDBH$biomass_kg
+
+# calculate sapwood area for each tree
+
+BassDBH$bark <- (BassDBH$DBH.cm*0.0326) - 0.1708
+BassDBH$sd.cm <- -0.7783 + (0.24546*BassDBH$DBH.cm)
+
+BassDBH$Htwd <- BassDBH$DBH.cm  - (BassDBH$sd.cm*2) - (BassDBH$bark*2)
+
+#calculate sapwood area
+
+BassDBH$sap.cm2 <- (pi*(((BassDBH$sd.cm) +(BassDBH$Htwd /2))^2))-(pi*((BassDBH$Htwd /2)^2))
+BassDBH$sap.m2 <- 0.0001*BassDBH$sap.cm2
+BassSt_SA <- sum(BassDBH$sap.m2)/ (pi*(15^2))
+BassSt_LA <- sum(BassDBH$LA_tree_m2)/ (pi*(15^2))
+
+
+
 
 #### organize sap flow ----
 
@@ -249,81 +287,60 @@ ggplot( dtAll %>%
 
 #join sensor info into table dt
 # make the cut off midnight 
+dtAll$doy7 <- ifelse(dtAll$hour >= 20,dtAll$doy+1,dtAll$doy )
+night <- dtAll[dtAll$hour <= 7 | dtAll$hour >= 20,]
 
-night <- dtAll[dtAll$hour < 5,]
-nightVPD <- weatherVPD %>%
-  filter(hour <= 5 )
 
 
 #filter night so maximum in day and sensor is provided
 maxnight1 <- night %>%
-  group_by(sensor, doy) %>%
+  group_by(sensor, doy7) %>%
   filter(dT == max(dT),na.rm=TRUE)
 #remove duplicate maximums that occur for longer than 15 min
 #just take earliest measurement
 maxnight <- maxnight1  %>%
-  group_by(sensor, doy) %>%
+  group_by(sensor, doy7) %>%
   filter(hour == min(hour),na.rm=TRUE)
 
-#get minimum VPD each night
-minVnight1 <- nightVPD %>%
-  group_by( doy) %>%
-  filter(VPD == min(VPD),na.rm=TRUE)
-#remove duplicate maximums that occur for longer than 15 min
-#just take earliest measurement
-minVnight <- minVnight1  %>%
-  group_by( doy) %>%
-  filter(hour == min(hour),na.rm=TRUE)
 
 
 #isolate max and join back into table
 maxJoin <- data.frame(sensor=maxnight$sensor,
-                      doy=maxnight$doy,
+                      doy7=maxnight$doy7,
                       maxDT = maxnight$dT)
 
-maxVComp <- left_join(maxJoin, minVnight, by="doy")
-# double check there doesn't seem to be a clear influences of 
-ggplot(maxVComp , aes(VPD,maxDT, color=as.factor(sensor)))+
-  geom_point()
-
-ggplot(maxJoin, aes(doy, maxDT, color = as.factor(sensor)))+
-  geom_line()+
-  geom_point()
-
-ggplot(maxVComp , aes(doy,VPD, color=as.factor(sensor)))+
-  geom_point()
-
-
-ggplot(maxJoin%>%filter(sensor == 5), aes(doy, maxDT, color = as.factor(sensor)))+
+ggplot(maxJoin, aes(doy7, maxDT, color = as.factor(sensor)))+
   geom_line()+
   geom_point()
 
 
-ggplot(maxJoin%>%filter(sensor == 6), aes(doy, maxDT, color = as.factor(sensor)))+
-  geom_line()+
-  geom_point()
-ggplot(maxJoin%>%filter(sensor == 10), aes(doy, maxDT, color = as.factor(sensor)))+
+
+ggplot(maxJoin%>%filter(sensor == 5), aes(doy7, maxDT, color = as.factor(sensor)))+
   geom_line()+
   geom_point()
 
-ggplot( dtAll %>%
-          filter(sensor == 10), aes(DD, dT))+
-  geom_point()+
-  geom_line()
 
-# calculate rolling average. Create a continuous day df
+ggplot(maxJoin%>%filter(sensor == 6), aes(doy7, maxDT, color = as.factor(sensor)))+
+  geom_line()+
+  geom_point()
+ggplot(maxJoin%>%filter(sensor == 10), aes(doy7, maxDT, color = as.factor(sensor)))+
+  geom_line()+
+  geom_point()
+
+
+
 dayAllDF <- data.frame(sensor = rep(unique(maxJoin$sensor), each=length(seq(166,250))),
-                       doy = rep(seq(166,250), times=length(unique(maxJoin$sensor))))
+                       doy7 = rep(seq(166,250), times=length(unique(maxJoin$sensor))))
 
-maxAllDays <- left_join(dayAllDF, maxJoin, by=c("sensor", "doy"))
+maxAllDays <- left_join(dayAllDF, maxJoin, by=c("sensor", "doy7"))
 
 
 
-ggplot(maxAllDays, aes(doy, maxDT, color=as.factor(sensor)))+
+ggplot(maxAllDays, aes(doy7, maxDT, color=as.factor(sensor)))+
   geom_point()
 
 #join backinto tabledt
-dtCalct1 <- left_join(dtAll, maxAllDays, by=c("sensor","doy"))
+dtCalct1 <- left_join(dtAll, maxAllDays, by=c("sensor","doy7"))
 #join sensor info
 dtCalc <- left_join(dtCalct1 , sensors, by=c("sensor"="Sensor.Number"))
 
@@ -351,7 +368,10 @@ ggplot(dtCalc %>% filter(sensor == 15), aes(DD, K))+
 
 dtCalc$velo <- 0.000119*(dtCalc$K^1.231)
 
-ggplot(dtCalc%>% filter(sensor == 10), aes(DD, velo, color=Tree.Type))+
+ggplot(dtCalc, aes(DD, velo, color=Tree.Type))+
+  geom_point()
+
+ggplot(dtCalc %>% filter(sensor == 12), aes(DD, velo, color=Tree.Type))+
   geom_point()
 
 #separate types
@@ -366,16 +386,14 @@ ggplot(basswoodT, aes(DD, velo, color=as.factor(sensor)))+
   geom_point()+
   geom_line()
 
-# filter anything above the 98 percentile
+# check Quantiles for outliers
 hemlockQ <- quantile(hemlockT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
-
-hemlock <- hemlockT %>%
-  filter(velo <= hemlockQ[99])
 
 basswoodQ <- quantile(basswoodT$velo,probs = seq(0,1,by=0.01),na.rm=TRUE)
 
-# basswood has no weird spikes
+#  no weird spikes
 basswood <-basswoodT 
+hemlock <-hemlockT 
 
 ggplot(hemlock, aes(DD, velo, color=as.factor(sensor)))+
   geom_point()+
