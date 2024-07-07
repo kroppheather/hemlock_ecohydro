@@ -600,12 +600,20 @@ bass_TreeL <- list()
 bass_gapZ <- list()
 bass_gap <- list()
 bass_gapDF <- list()
+
+bass_gapZc <- list()
+bass_gapc <- list()
+bass_gapDFc <- list()
 for(i in 1:length(sensorB)){
   bass_TreeL[[i]] <- basswoodALL %>% filter(Tree.Number == sensorB[i])
   bass_gapZ[[i]] <- zoo(bass_TreeL[[i]]$Elt, bass_TreeL[[i]]$date)
   bass_gap[[i]] <- na.approx(bass_gapZ[[i]], maxgap=3, na.rm=FALSE) 
   bass_gapDF[[i]] <- fortify(bass_gap[[i]])
   bass_gapDF[[i]]$Tree.Number <- rep(sensorB[i], nrow(bass_gapDF[[i]]))
+  bass_gapZc[[i]] <- zoo(bass_TreeL[[i]]$Ec, bass_TreeL[[i]]$date)
+  bass_gapc[[i]] <- na.approx(bass_gapZc[[i]], maxgap=3, na.rm=FALSE) 
+  bass_gapDFc[[i]] <- fortify(bass_gapc[[i]])
+  bass_gapDFc[[i]]$Tree.Number <- rep(sensorB[i], nrow(bass_gapDFc[[i]]))
   
 }
 
@@ -614,19 +622,17 @@ bass_gapf <- do.call("rbind", bass_gapDF)
 bass_gapf$doy <- yday(bass_gapf$Index)
 bass_gapf$hour <- hour(bass_gapf$Index)
 names(bass_gapf) <- c("date", "Elt","Tree.Number","doy","hour")
+bass_gapfc <- do.call("rbind", bass_gapDFc)
+bass_gapfc$doy <- yday(bass_gapfc$Index)
+bass_gapfc$hour <- hour(bass_gapfc$Index)
+names(bass_gapfc) <- c("date", "Ec","Tree.Number","doy","hour")
+bass_gapfj <- full_join(bass_gapfc,bass_gapf, by=c("Tree.Number","doy","hour","date"))
+
 # add sensor info back in
 Nsensors <- sensors %>% filter(Direction == "N")
 
-bass_gapf <- left_join(bass_gapf, Nsensors, by=c("Tree.Number"))
+bass_gapf <- left_join(bass_gapfj, Nsensors, by=c("Tree.Number"))
 
-bass_gapf <- do.call("rbind", bass_gapDF)
-bass_gapf$doy <- yday(bass_gapf$Index)
-bass_gapf$hour <- hour(bass_gapf$Index)
-names(bass_gapf) <- c("date", "Elt","Tree.Number","doy","hour")
-# add sensor info back in
-Nsensors <- sensors %>% filter(Direction == "N")
-
-bass_gapf <- left_join(bass_gapf, Nsensors, by=c("Tree.Number"))
 bass_gapf$species <- rep("basswood", nrow(bass_gapf))
 
 
@@ -635,12 +641,21 @@ hem_TreeL <- list()
 hem_gapZ <- list()
 hem_gap <- list()
 hem_gapDF <- list()
+
+hem_gapZc <- list()
+hem_gapc <- list()
+hem_gapDFc <- list()
 for(i in 1:length(sensorH)){
   hem_TreeL[[i]] <- hemlockALL %>% filter(Tree.Number == sensorH[i])
   hem_gapZ[[i]] <- zoo(hem_TreeL[[i]]$Elt, hem_TreeL[[i]]$date)
   hem_gap[[i]] <- na.approx(hem_gapZ[[i]], maxgap=3, na.rm=FALSE) 
   hem_gapDF[[i]] <- fortify(hem_gap[[i]])
   hem_gapDF[[i]]$Tree.Number <- rep(sensorH[i], nrow(hem_gapDF[[i]]))
+  
+  hem_gapZc[[i]] <- zoo(hem_TreeL[[i]]$Ec, hem_TreeL[[i]]$date)
+  hem_gapc[[i]] <- na.approx(hem_gapZc[[i]], maxgap=3, na.rm=FALSE) 
+  hem_gapDFc[[i]] <- fortify(hem_gapc[[i]])
+  hem_gapDFc[[i]]$Tree.Number <- rep(sensorH[i], nrow(hem_gapDFc[[i]]))
   
 }
 
@@ -649,9 +664,15 @@ hem_gapf <- do.call("rbind", hem_gapDF)
 hem_gapf$doy <- yday(hem_gapf$Index)
 hem_gapf$hour <- hour(hem_gapf$Index)
 names(hem_gapf) <- c("date", "Elt","Tree.Number","doy","hour")
-# add sensor info back in
 
-hem_gapf <- left_join(hem_gapf, Nsensors, by=c("Tree.Number"))
+hem_gapfc <- do.call("rbind", hem_gapDFc)
+hem_gapfc$doy <- yday(hem_gapfc$Index)
+hem_gapfc$hour <- hour(hem_gapfc$Index)
+names(hem_gapfc) <- c("date", "Ec","Tree.Number","doy","hour")
+# add sensor info back in
+hem_gapj <- full_join(hem_gapf, hem_gapfc, by=c("date","Tree.Number","doy","hour"))
+
+hem_gapf <- left_join(hem_gapj, Nsensors, by=c("Tree.Number"))
 hem_gapf$species <- rep("hemlock", nrow(hem_gapf))
 
 gapf_El <-rbind(hem_gapf, bass_gapf)
