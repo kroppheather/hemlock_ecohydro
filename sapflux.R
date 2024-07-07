@@ -551,9 +551,17 @@ tree.hour <- sapFlowNN %>%
             sd.Elhr = sd(El.hr, na.rm=TRUE),
             n_t= length(na.omit(Js))) %>%
   filter(n_t >=3)
+# Js is in Kg m-2 s-1
+# 1 m3 is 1000 kg
+# convert Js back to m3
+# m3 per m2 of ground= m s-1
+# covert to mm hr
+tree.hour$Ec <- ifelse(tree.hour$species=="hemlock",
+  ((tree.hour$Jst/1000)*HemSt_SA)*1000*60*60,
+  ((tree.hour$Jst/1000)*BassSt_SA)*1000*60*60)
 
 
-# gap fill separate by species
+#### gap fill separate by species ----
 
 
 hemlock_hour <- tree.hour %>%
@@ -700,18 +708,27 @@ ggplot(sapflow.max, aes(doy, max_Js, color=species))+
 Tot.tree.L.day <- gapf_El %>%
   group_by(Tree.Number, doy, species) %>%
   summarise(Tot_El_day = sum(El.hrt, na.rm=TRUE),
-            Tot_n_day = length(na.omit(El.hrt)))%>%
+            Tot_n_day = length(na.omit(El.hrt)),
+            Tot_Ec_day= sum(Ec, na.rm=TRUE))%>%
   filter(Tot_n_day ==24)
 
-# Kg m-2 leaf day day
+# Kg m-2 leaf day day or L m-2 day
+# Ec is in mm per day
 T.L.day <- Tot.tree.L.day %>%
   group_by( doy, species) %>%
   summarise(El_day = mean(Tot_El_day), # per tree
             sd_El = sd(Tot_El_day),
+            Ec_day = mean(Tot_Ec_day), # per tree
+            sd_Ec = sd(Tot_Ec_day),
             n_plant = length(na.omit(Tot_El_day)))%>% 
   filter(n_plant >= 3)
 
+
+
 ggplot(T.L.day, aes(doy, El_day, color=species))+
+  geom_point()+
+  geom_line()
+ggplot(T.L.day, aes(doy, Ec_day, color=species))+
   geom_point()+
   geom_line()
 
