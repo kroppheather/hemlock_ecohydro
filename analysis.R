@@ -27,12 +27,7 @@ source(paste0(dirScript, "/sapflux.r"))
 source(paste0(dirScript, "/soil_weather.r"))
 
 #### set up directories ----
-dirUser <- 1
 
-dirScriptAll <- c("/Users/hkropp/Documents/GitHub/hemlock_ecohydro",
-               "c:/Users/hkropp/Documents/GitHub/hemlock_ecohydro")
-
-dirScript <- dirScriptAll[1]
 dirData <- "/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/kirkland_ecohydro"
 
 # read in canopy density data
@@ -82,18 +77,16 @@ T_L_day$El_se <- T_L_day$sd_El/sqrt(T_L_day$n_plant)
 T_L_day <- T_L_day %>%
   filter(maxVPD >0.6 & Prec < 2)
 
-ggplot(T_L_day, aes(maxVPD, El_day, color=species))+
-  geom_point()
 
-ggplot(T_L_day, aes(aveVPD, Ec_day, color=species))+
+ggplot(T_L_day, aes(aveVPD, El_day, color=species))+
   geom_point()
 
 ggplot(T_L_day, aes(doy, El_day, color=species))+
   geom_point()+
   geom_line()
+
 ggplot(T_L_day, aes(doy, Ec_day, color=species))+
-  geom_point()+
-  geom_line()
+  geom_point()
 
 ggplot(T_L_day, aes(ave_SW, El_day, color=species))+
   geom_point()
@@ -143,7 +136,7 @@ dailyAll <- left_join(weatherDaily,dailyAll1, by="doy")
 
 sapHour <- left_join(sapflow.hour, weatherHourly,  by=c("doy", "hour1"="hour"))
 sapHourA <- sapHour %>%
-  filter(VPD_hr > 0.1 & Precip < 1 & hour1 >= 8 & hour1 <= 19)
+  filter(VPD_hr > 0.2 & Precip < 1 & hour1 >= 8 & hour1 <= 19)
 
 daysFull <- sapHourA %>%
   group_by(doy, species) %>%
@@ -173,6 +166,12 @@ sapH$swcI <- ifelse(sapH$SWC <= 0.25, 1,
 range(soilDaily$SWC)
 
 ggplot(sapH %>% filter(species == "hemlock"), aes(VPD_hr, Js, color=as.factor(swcI)))+
+  geom_point()
+
+ggplot(sapH %>% filter(species == "hemlock"), aes(VPD_hr, Js_g, color=SWC))+
+  geom_point()
+
+ggplot(sapH %>% filter(species == "basswood"), aes(VPD_hr, Js_g, color=SWC))+
   geom_point()
 
 ggplot(sapH %>% filter(species == "hemlock"), aes(S_Rad, Js, color=as.factor(swcI)))+
@@ -235,7 +234,7 @@ y1seq <- seq(0,0.5,by=0.1)
 y1bseq <- seq(0, 35, by=5)
 y2seq <- seq(0,2.4,by=0.2)
 y2bseq <- seq(10,30, by=5)
-y3seq <- seq(0,0.12,by=0.02)
+y3seq <- seq(0,0.3,by=0.05)
 
 yl1 <- 0
 yh1 <- 0.5
@@ -244,7 +243,7 @@ yl2 <- 0
 yh2 <- 2.5
 
 yl3 <- 0
-yh3 <- 0.12
+yh3 <- 0.3
 
 
 
@@ -335,8 +334,8 @@ arrows(bassDay$doy,bassDay$El_day+bassDay$El_se,
 axis(1, xseq, cex.axis=cax )
 axis(2, y3seq,  cex.axis=cax, las=2 )
 mtext("Daily transpiration", side=2, line=lly1, cex=cll)
-mtext(expression(paste("(L m"^-2, "day"^-1, ")")), side=2, line=lly2, cex=cll)
-legend(200,0.12, c("hemlock", "basswood"), pch=19,
+mtext(expression(paste("(L m"["leaf"]^-2, " day"^-1, ")")), side=2, line=lly2, cex=cll)
+legend(230,0.3, c("hemlock", "basswood"), pch=19,
        col=c(hemcolt, basscolt), cex=lgc, bty="n")
 mtext("Day of year", side=1, line=llx, cex=cll)
 
@@ -444,7 +443,7 @@ mtext(expression(paste(" (W", "m"^-2, ")")), side=1, line=llx2, cex=cll)
 dev.off()
 
 
-############## Figure 3 hourly Js ------
+############## Figure 3 hourly Js over time period ------
 
 hd <- 2
 wd <- 4.5
