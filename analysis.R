@@ -365,7 +365,7 @@ xh3 <- 150
 
 y1seq <- seq(0,0.1,by=0.02)
 yl1 <- 0
-yh1 <- 0.1
+yh1 <- 0.3
 
 
 #axis tick label size
